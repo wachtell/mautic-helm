@@ -1,0 +1,9 @@
+dependencies:
+- name: mariadb
+  repository: https://charts.bitnami.com/bitnami
+  version: 21.0.8
+- name: redis
+  repository: https://charts.bitnami.com/bitnami
+  version: 22.0.7
+digest: sha256:14462d9d81619fea3a78374bd928c56307b816f9142bac6d7ca51577cc363a3b
+generated: "2026-07-17T12:26:08.57121391+02:00"

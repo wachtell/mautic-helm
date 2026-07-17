@@ -36,7 +36,36 @@ resources:
 
 
 mariadb:
+
   enabled: true
 
+  auth:
+    database: mautic
+    username: mautic
+    password: change-me
+    rootPassword: change-me-root
+
+  primary:
+
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 20Gi
+
+
 redis:
+
   enabled: true
+
+  architecture: standalone
+
+  auth:
+    enabled: true
+    password: change-me-redis
+
+  master:
+
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 5Gi
