@@ -1,0 +1,42 @@
+replicaCount: 2
+
+image:
+  repository: mautic/mautic
+  tag: "7-apache"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: traefik
+
+  hostname: mautic.wachtell.net
+
+  tls:
+    enabled: true
+    secretName: mautic-tls
+
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 20Gi
+
+resources:
+
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+  limits:
+    cpu: 2
+    memory: 2Gi
+
+
+mariadb:
+  enabled: true
+
+redis:
+  enabled: true

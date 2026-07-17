@@ -1,0 +1,38 @@
+apiVersion: v2
+
+name: mautic
+
+description: Production-ready Helm chart for Mautic
+
+type: application
+
+version: 0.1.0
+
+appVersion: "7.0"
+
+kubeVersion: ">=1.30.0"
+
+keywords:
+  - mautic
+  - marketing
+  - automation
+  - crm
+
+home: https://www.mautic.org
+
+sources:
+  - https://github.com/mautic/mautic
+
+maintainers:
+  - name: Kristian Wachtell
+
+dependencies:
+  - name: mariadb
+    version: "21.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: mariadb.enabled
+
+  - name: redis
+    version: "22.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
