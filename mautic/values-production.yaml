@@ -11,14 +11,7 @@ service:
 
 ingress:
   enabled: false
-  className: traefik
-
-  hostname: mautic.wachtell.net
-
-  tls:
-    enabled: true
-    secretName: mautic-tls
-
+  
 ingressRoute:
   enabled: true
   entryPoints:
@@ -58,7 +51,7 @@ mariadb:
   auth:
     database: mautic
     username: mautic
-    
+   
   primary:
 
     persistence:
@@ -75,7 +68,7 @@ redis:
 
   auth:
     enabled: true
-
+    
   master:
 
     persistence:

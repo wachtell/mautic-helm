@@ -1,0 +1,123 @@
+{{- if .Values.cron.enabled }}
+
+{{- range .Values.cron.jobs }}
+
+---
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+
+  name: {{ include "mautic.fullname" $ }}-{{ .name }}
+
+
+  labels:
+
+    {{- include "mautic.labels" $ | nindent 4 }}
+
+
+spec:
+
+  schedule: "{{ .schedule }}"
+
+
+  concurrencyPolicy:
+
+    Forbid
+
+
+  successfulJobsHistoryLimit:
+
+    3
+
+
+  failedJobsHistoryLimit:
+
+    3
+
+
+  jobTemplate:
+
+    spec:
+
+      template:
+
+        spec:
+
+
+          restartPolicy:
+
+            OnFailure
+
+
+          containers:
+
+
+          - name: mautic-cron
+
+
+            image:
+
+              "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
+
+
+            command:
+
+
+            - /bin/sh
+
+
+            - -c
+
+
+            - |
+
+              php /var/www/html/docroot/bin/console {{ .command }}
+
+
+
+            envFrom:
+
+
+            envFrom:
+
+            - configMapRef:
+                name:
+                  {{ include "mautic.fullname" $ }}-config
+
+            - secretRef:
+                name:
+                  {{ include "mautic.fullname" $ }}-secret
+
+
+            volumeMounts:
+
+
+            - name:
+
+                mautic-data
+
+
+              mountPath:
+                /var/www/html/docroot/media
+
+
+
+          volumes:
+
+
+          - name:
+
+              mautic-data
+
+
+            persistentVolumeClaim:
+
+
+              claimName:
+
+                {{ include "mautic.fullname" $ }}
+
+{{- end }}
+
+{{- end }}

@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+  name: {{ include "mautic.fullname" . }}
+
+  labels:
+
+    {{- include "mautic.labels" . | nindent 4 }}
+
+
+spec:
+
+  replicas: {{ .Values.replicaCount }}
+
+
+  selector:
+
+    matchLabels:
+
+      {{- include "mautic.selectorLabels" . | nindent 6 }}
+
+
+  template:
+
+    metadata:
+
+      labels:
+
+        {{- include "mautic.selectorLabels" . | nindent 8 }}
+
+
+    spec:
+
+      containers:
+
+      - name: mautic
+
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+
+        ports:
+
+        - name: http
+
+          containerPort: 80
+
+
+        envFrom:
+
+        - configMapRef:
+            name: {{ include "mautic.fullname" . }}-config
+
+        - secretRef:
+            name: {{ include "mautic.fullname" . }}-secret
+
+
+        volumeMounts:
+
+          - name: mautic-media
+
+            mountPath: /var/www/html/docroot/media
+
+          - name: mautic-config
+
+            mountPath: /var/www/html/config
+
+
+        resources:
+
+          {{- toYaml .Values.resources | nindent 10 }}
+
+
+        readinessProbe:
+
+          httpGet:
+
+            path: /
+
+            port: http
+
+          initialDelaySeconds: 60
+
+          periodSeconds: 10
+
+
+        livenessProbe:
+
+          httpGet:
+
+            path: /
+
+            port: http
+
+          initialDelaySeconds: 120
+
+          periodSeconds: 20
+
+
+      volumes:
+
+      - name: mautic-media
+
+        persistentVolumeClaim:
+
+          claimName: {{ include "mautic.fullname" . }}-media
+
+
+      - name: mautic-config
+
+        persistentVolumeClaim:
+
+          claimName: {{ include "mautic.fullname" . }}-config

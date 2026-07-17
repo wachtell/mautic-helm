@@ -1,0 +1,36 @@
+apiVersion: v1
+
+kind: ConfigMap
+
+metadata:
+
+  name: {{ include "mautic.fullname" . }}-config
+
+  labels:
+
+    {{- include "mautic.labels" . | nindent 4 }}
+
+
+data:
+
+  MAUTIC_TRUSTED_PROXIES: "*"
+
+  PHP_MEMORY_LIMIT: "512M"
+
+  PHP_UPLOAD_LIMIT: "50M"
+
+
+  DATABASE_DRIVER: "mysql"
+
+  DATABASE_HOST: "{{ include "mautic.fullname" . }}-mariadb"
+
+  DATABASE_PORT: "3306"
+
+  DATABASE_NAME: "{{ .Values.mariadb.auth.database }}"
+
+  DATABASE_USER: "{{ .Values.mariadb.auth.username }}"
+
+
+  REDIS_HOST: "{{ include "mautic.fullname" . }}-redis-master"
+
+  REDIS_PORT: "6379"
