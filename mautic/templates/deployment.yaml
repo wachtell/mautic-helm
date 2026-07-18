@@ -33,6 +33,10 @@ spec:
 
 
     spec:
+      securityContext:
+            runAsUser: 33
+            runAsGroup: 33
+            fsGroup: 33
 
       containers:
 
@@ -51,23 +55,27 @@ spec:
 
 
         envFrom:
-
         - configMapRef:
             name: {{ include "mautic.fullname" . }}-config
 
         - secretRef:
             name: {{ include "mautic.fullname" . }}-secret
 
+        env:
+        - name: DOCKER_MAUTIC_ROLE
+          value: mautic_web
+
 
         volumeMounts:
 
           - name: mautic-media
-
             mountPath: /var/www/html/docroot/media
 
           - name: mautic-config
-
             mountPath: /var/www/html/config
+
+          - name: mautic-data
+            mountPath: /var/www/html/var
 
 
         resources:
@@ -76,42 +84,30 @@ spec:
 
 
         readinessProbe:
-
-          httpGet:
-
-            path: /
-
+          tcpSocket:
             port: http
-
-          initialDelaySeconds: 60
-
+          initialDelaySeconds: 30
           periodSeconds: 10
+          failureThreshold: 6
 
 
         livenessProbe:
-
-          httpGet:
-
-            path: /
-
+          tcpSocket:
             port: http
-
-          initialDelaySeconds: 120
-
-          periodSeconds: 20
-
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          failureThreshold: 5
 
       volumes:
 
       - name: mautic-media
-
         persistentVolumeClaim:
-
-          claimName: {{ include "mautic.fullname" . }}-media
-
+          claimName: mautic-media
 
       - name: mautic-config
-
         persistentVolumeClaim:
+          claimName: mautic-config
 
-          claimName: {{ include "mautic.fullname" . }}-config
+      - name: mautic-data
+        persistentVolumeClaim:
+          claimName: mautic-data

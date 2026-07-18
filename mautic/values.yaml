@@ -33,9 +33,20 @@ ingressRoute:
 
 persistence:
   enabled: true
-  storageClass: longhorn
-  size: 20Gi
+  createPVC: true
 
+  storageClass: longhorn
+  accessMode: ReadWriteMany
+
+  size:
+    media: 20Gi
+    config: 5Gi
+    data: 10Gi
+
+  mediaClaim: ""
+  configClaim: ""
+  dataClaim: ""
+  
 resources:
 
   requests:
@@ -80,7 +91,8 @@ redis:
 
     persistence:
       enabled: true
-      storageClass: longhorn
+      storageClass: ""
+      accessMode: ReadWriteOnce
       size: 5Gi
 cron:
 

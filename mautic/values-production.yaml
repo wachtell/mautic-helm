@@ -26,9 +26,20 @@ ingressRoute:
 
 persistence:
   enabled: true
-  storageClass: longhorn
-  size: 20Gi
+  createPVC: true
 
+  storageClass: longhorn
+  accessMode: ReadWriteMany
+
+  size:
+    media: 20Gi
+    config: 5Gi
+    data: 10Gi
+
+  mediaClaim: ""
+  configClaim: ""
+  dataClaim: ""
+  
 resources:
 
   requests:
@@ -43,108 +54,78 @@ serviceAccount:
   create: true
   name: ""
 
+env:
+  DOCKER_MAUTIC_ROLE: mautic_web
 
 mariadb:
-
   enabled: true
-
+  image:
+    repository: bitnamilegacy/mariadb
+    tag: 11.8.3-debian-12-r0
   auth:
     database: mautic
     username: mautic
-   
   primary:
-
     persistence:
       enabled: true
       storageClass: longhorn
+      accessMode: ReadWriteOnce
       size: 20Gi
 
 
 redis:
-
   enabled: true
-
+  image:
+    repository: bitnamilegacy/redis
+    tag: 8.2.1-debian-12-r0
   architecture: standalone
-
   auth:
     enabled: true
-    
   master:
-
     persistence:
       enabled: true
       storageClass: longhorn
+      accessMode: ReadWriteOnce
       size: 5Gi
+
 cron:
-
   enabled: true
-
 
   jobs:
 
-
     - name: segments-update
-
       schedule: "*/15 * * * *"
-
       command: mautic:segments:update
 
-
-
     - name: campaigns-update
-
       schedule: "*/15 * * * *"
-
-      command: mautic:campaigns:update
-
-
+      command: mautic:campaigns:rebuild
 
     - name: campaigns-trigger
-
       schedule: "*/5 * * * *"
-
       command: mautic:campaigns:trigger
 
-
-
-    - name: emails-send
-
+    - name: messages-send
       schedule: "* * * * *"
-
-      command: mautic:emails:send
-
-
+      command: mautic:messages:send
 
     - name: broadcasts-send
-
       schedule: "* * * * *"
-
       command: mautic:broadcasts:send
 
-
-
     - name: cleanup
-
       schedule: "0 3 * * *"
-
       command: mautic:maintenance:cleanup
-
+      
 autoscaling:
-
   enabled: true
-
   minReplicas: 2
-
   maxReplicas: 5
-
   targetCPUUtilizationPercentage: 75
 
 pdb:
-
   enabled: true
-
   minAvailable: 1
 
 networkPolicy:
-
   enabled: false

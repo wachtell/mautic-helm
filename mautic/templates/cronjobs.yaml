@@ -7,117 +7,83 @@ apiVersion: batch/v1
 kind: CronJob
 
 metadata:
-
   name: {{ include "mautic.fullname" $ }}-{{ .name }}
-
-
   labels:
-
-    {{- include "mautic.labels" $ | nindent 4 }}
-
+{{- include "mautic.labels" $ | nindent 4 }}
 
 spec:
-
   schedule: "{{ .schedule }}"
 
+  concurrencyPolicy: Forbid
 
-  concurrencyPolicy:
-
-    Forbid
-
-
-  successfulJobsHistoryLimit:
-
-    3
-
-
-  failedJobsHistoryLimit:
-
-    3
-
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  timeZone: "Europe/Copenhagen"
+  startingDeadlineSeconds: 300
 
   jobTemplate:
+    metadata:
+      labels:
+{{- include "mautic.labels" $ | nindent 8 }}
+        mautic-job: {{ .name }}
 
     spec:
-
+      backoffLimit: 3
+      
       template:
-
         spec:
-
-
-          restartPolicy:
-
-            OnFailure
-
+          securityContext:
+            runAsUser: 33
+            runAsGroup: 33
+            fsGroup: 33
+          restartPolicy: OnFailure
 
           containers:
-
-
           - name: mautic-cron
 
-
-            image:
-
-              "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
-
+            image: "{{ $.Values.image.repository }}:{{ $.Values.image.tag }}"
 
             command:
-
-
-            - /bin/sh
-
-
-            - -c
-
-
-            - |
-
-              php /var/www/html/docroot/bin/console {{ .command }}
-
-
+              - /bin/sh
+              - -c
+              - php /var/www/html/bin/console {{ .command }}
 
             envFrom:
-
-
-            envFrom:
-
             - configMapRef:
-                name:
-                  {{ include "mautic.fullname" $ }}-config
+                name: {{ include "mautic.fullname" $ }}-config
 
             - secretRef:
-                name:
-                  {{ include "mautic.fullname" $ }}-secret
+                name: {{ include "mautic.fullname" $ }}-secret
 
+            env:
+            - name: DOCKER_MAUTIC_ROLE
+              value: mautic_cron
+
+            resources:
+{{- toYaml $.Values.resources | nindent 14 }}
 
             volumeMounts:
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media
 
+            - name: mautic-config
+              mountPath: /var/www/html/config
 
-            - name:
-
-                mautic-data
-
-
-              mountPath:
-                /var/www/html/docroot/media
-
-
+            - name: mautic-data
+              mountPath: /var/www/html/var
 
           volumes:
-
-
-          - name:
-
-              mautic-data
-
-
+          - name: mautic-media
             persistentVolumeClaim:
+              claimName: {{ include "mautic.mediaPVC" $ }}
 
+          - name: mautic-config
+            persistentVolumeClaim:
+              claimName: {{ include "mautic.configPVC" $ }}
 
-              claimName:
-
-                {{ include "mautic.fullname" $ }}
+          - name: mautic-data
+            persistentVolumeClaim:
+              claimName: {{ include "mautic.dataPVC" $ }}
 
 {{- end }}
-
 {{- end }}

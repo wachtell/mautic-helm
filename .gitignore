@@ -1,0 +1,6 @@
+# Mautic secrets
+mautic/values-secret.yaml
+
+# Helm generated files
+rendered.yaml
+*.rendered.yaml

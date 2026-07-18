@@ -54,3 +54,33 @@ Create the service account name
 {{- include "mautic.fullname" . }}
 {{- end }}
 {{- end }}
+
+{{/*
+PVC names
+*/}}
+
+{{- define "mautic.mediaPVC" -}}
+{{- if .Values.persistence.mediaClaim -}}
+{{ .Values.persistence.mediaClaim }}
+{{- else -}}
+{{ include "mautic.fullname" . }}-media
+{{- end -}}
+{{- end -}}
+
+
+{{- define "mautic.configPVC" -}}
+{{- if .Values.persistence.configClaim -}}
+{{ .Values.persistence.configClaim }}
+{{- else -}}
+{{ include "mautic.fullname" . }}-config
+{{- end -}}
+{{- end -}}
+
+
+{{- define "mautic.dataPVC" -}}
+{{- if .Values.persistence.dataClaim -}}
+{{ .Values.persistence.dataClaim }}
+{{- else -}}
+{{ include "mautic.fullname" . }}-data
+{{- end -}}
+{{- end -}}
