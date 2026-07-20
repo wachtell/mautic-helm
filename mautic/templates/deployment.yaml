@@ -33,81 +33,66 @@ spec:
 
 
     spec:
-      securityContext:
-            runAsUser: 33
-            runAsGroup: 33
-            fsGroup: 33
 
       containers:
 
-      - name: mautic
+        - name: mautic
 
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
 
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
 
+          ports:
+            - name: http
+              containerPort: 80
 
-        ports:
+          envFrom:
+            - configMapRef:
+                name: {{ include "mautic.fullname" . }}-config
 
-        - name: http
+            - secretRef:
+                name: {{ include "mautic.fullname" . }}-secret
 
-          containerPort: 80
+          env:
+            - name: DOCKER_MAUTIC_ROLE
+              value: mautic_web
 
+          volumeMounts:
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media
 
-        envFrom:
-        - configMapRef:
-            name: {{ include "mautic.fullname" . }}-config
+            - name: mautic-config
+              mountPath: /var/www/html/config
 
-        - secretRef:
-            name: {{ include "mautic.fullname" . }}-secret
+            - name: mautic-data
+              mountPath: /var/www/html/var
 
-        env:
-        - name: DOCKER_MAUTIC_ROLE
-          value: mautic_web
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
 
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
 
-        volumeMounts:
-
-          - name: mautic-media
-            mountPath: /var/www/html/docroot/media
-
-          - name: mautic-config
-            mountPath: /var/www/html/config
-
-          - name: mautic-data
-            mountPath: /var/www/html/var
-
-
-        resources:
-
-          {{- toYaml .Values.resources | nindent 10 }}
-
-
-        readinessProbe:
-          tcpSocket:
-            port: http
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          failureThreshold: 6
-
-
-        livenessProbe:
-          tcpSocket:
-            port: http
-          initialDelaySeconds: 180
-          periodSeconds: 30
-          failureThreshold: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            failureThreshold: 5
 
       volumes:
+        - name: mautic-media
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.mediaPVC" . }}
 
-      - name: mautic-media
-        persistentVolumeClaim:
-          claimName: mautic-media
+        - name: mautic-config
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.configPVC" . }}
 
-      - name: mautic-config
-        persistentVolumeClaim:
-          claimName: mautic-config
-
-      - name: mautic-data
-        persistentVolumeClaim:
-          claimName: mautic-data
+        - name: mautic-data
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.dataPVC" . }}
