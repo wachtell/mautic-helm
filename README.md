@@ -1,37 +1,29 @@
 # Mautic Helm Chart
 
-Production-ready Helm chart for deploying Mautic on Kubernetes.
-
-Designed for:
-
-- Kubernetes 1.31+
-- Helm v3
-- Traefik v3
-- cert-manager
-- Longhorn storage
-- MariaDB
-- Redis
-- Authentik OIDC
+Helm chart for deploying Mautic 7 on Kubernetes.
 
 ## Features
 
-✅ Mautic 7.x support  
-✅ Persistent storage  
-✅ MariaDB deployment  
-✅ Redis support  
-✅ SMTP configuration  
-✅ Kubernetes CronJobs  
-✅ TLS via cert-manager  
-✅ Traefik ingress  
-✅ Security contexts  
-✅ Production defaults  
+- Mautic 7 Apache image
+- MariaDB dependency
+- Redis dependency
+- Traefik IngressRoute support
+- Longhorn persistent storage
+- Kubernetes CronJobs
+- Horizontal Pod Autoscaling
+- PodDisruptionBudget
 
-## Installation
+## Install
 
 ```bash
-helm dependency update ./mautic
-
-helm install mautic ./mautic \
-  --namespace mautic \
+helm install mautic . \
+  -n mautic \
   --create-namespace \
-  -f mautic/values-production.yaml
+  -f values-production.yaml
+
+## Upgrade
+
+```bash
+helm upgrade mautic . \
+  -n mautic \
+  -f values-production.yaml
