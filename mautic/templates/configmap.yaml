@@ -20,6 +20,8 @@ data:
 
   MAUTIC_REDIS_PORT: "6379"
 
+  MAUTIC_REDIS_PRIMARY_ONLY: "false"
+
   MAUTIC_TRUSTED_PROXIES: {{ .Values.mautic.trustedProxies | toJson | quote }}
 
   MAUTIC_TRUSTED_HOSTS: {{ .Values.mautic.trustedHosts | toJson | quote }}

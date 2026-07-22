@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: {{ include "mautic.fullname" . }}-php-opcache
+
+data:
+  opcache.ini: |
+    opcache.enable=1
+    opcache.enable_cli=0
+
+    ; Memory
+    opcache.memory_consumption=256
+    opcache.interned_strings_buffer=16
+
+    ; Number of cached PHP scripts
+    opcache.max_accelerated_files=30000
+
+    ; Production setting
+    opcache.validate_timestamps=0
+    opcache.revalidate_freq=0
+
+    ; Keep comments needed by some frameworks
+    opcache.save_comments=1
+
+    ; Performance
+    opcache.fast_shutdown=1

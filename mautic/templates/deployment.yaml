@@ -26,10 +26,12 @@ spec:
   template:
 
     metadata:
-
       labels:
 
         {{- include "mautic.selectorLabels" . | nindent 8 }}
+      
+      annotations:
+        checksum/php-opcache: {{ include (print $.Template.BasePath "/php-opcache-configmap.yaml") . | sha256sum }}
 
 
     spec:
@@ -56,16 +58,20 @@ spec:
           env:
             - name: DOCKER_MAUTIC_ROLE
               value: mautic_web
-
+                        
           volumeMounts:
             - name: mautic-media
               mountPath: /var/www/html/docroot/media
 
             - name: mautic-config
               mountPath: /var/www/html/config
-
+            
             - name: mautic-data
               mountPath: /var/www/html/var
+
+            - name: php-opcache
+              mountPath: /usr/local/etc/php/conf.d/opcache.ini
+              subPath: opcache.ini
 
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -92,7 +98,11 @@ spec:
         - name: mautic-config
           persistentVolumeClaim:
             claimName: {{ include "mautic.configPVC" . }}
-
+        
         - name: mautic-data
           persistentVolumeClaim:
             claimName: {{ include "mautic.dataPVC" . }}
+        
+        - name: php-opcache
+          configMap:
+            name: {{ include "mautic.fullname" . }}-php-opcache
