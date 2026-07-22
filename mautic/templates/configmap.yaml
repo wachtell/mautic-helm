@@ -19,3 +19,9 @@ data:
   MAUTIC_REDIS_HOST: {{ include "mautic.fullname" . }}-redis-master
 
   MAUTIC_REDIS_PORT: "6379"
+
+  MAUTIC_TRUSTED_PROXIES: {{ .Values.mautic.trustedProxies | toJson | quote }}
+
+  MAUTIC_TRUSTED_HOSTS: {{ .Values.mautic.trustedHosts | toJson | quote }}
+
+  MAUTIC_BASE_URL: https://mautic.wachtell.net

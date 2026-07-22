@@ -5,6 +5,16 @@ image:
   tag: "7-apache"
   pullPolicy: IfNotPresent
 
+mautic:
+  trustedProxies:
+    - 127.0.0.1
+    - 10.42.0.0/16
+    - 192.168.3.0/24
+    - 192.168.0.0/24
+    - REMOTE_ADDR
+  trustedHosts:
+    - mautic.wachtell.net
+
 service:
   type: ClusterIP
   port: 80
@@ -118,7 +128,7 @@ cron:
       command: mautic:maintenance:cleanup
       
 autoscaling:
-  enabled: true
+  enabled: false
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 75
