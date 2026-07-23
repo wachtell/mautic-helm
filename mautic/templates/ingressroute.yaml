@@ -1,0 +1,29 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+
+metadata:
+  name: {{ include "mautic.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+  metadata:
+  annotations:
+    {{- with .Values.ingressRoute.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+spec:
+  entryPoints:
+    {{- range .Values.ingressRoute.entryPoints }}
+    - {{ . }}
+    {{- end }}
+
+  routes:
+    - match: Host(`{{ .Values.ingressRoute.host }}`)
+      kind: Rule
+      services:
+        - name: {{ include "mautic.fullname" . }}
+          port: {{ .Values.service.port }}
+
+  tls:
+    secretName: {{ .Values.ingressRoute.tls.secretName }}
