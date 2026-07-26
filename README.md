@@ -21,6 +21,8 @@ helm install mautic . \
   --create-namespace \
   -f values-production.yaml
 
+
+
 ## Upgrade
 
 ```bash
