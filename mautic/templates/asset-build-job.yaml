@@ -1,0 +1,42 @@
+{{- if .Values.assets.build.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "mautic.fullname" . }}-assets
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "mautic.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: asset-build
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          workingDir: /var/www/html
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Building Mautic production assets..."
+              npm run build
+              echo "Checking CKEditor asset..."
+              test -f /var/www/html/docroot/media/libraries/ckeditor/ckeditor.js
+              echo "CKEditor asset successfully generated:"
+              ls -lh /var/www/html/docroot/media/libraries/ckeditor/ckeditor.js
+          volumeMounts:
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media
+      volumes:
+        - name: mautic-media
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.mediaPVC" . }}
+{{- end }}
