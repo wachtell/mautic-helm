@@ -50,6 +50,10 @@ persistence:
   mediaClaim: ""
   configClaim: ""
   dataClaim: ""
+
+assets:
+  build:
+    enabled: true
   
 resources:
   requests:
