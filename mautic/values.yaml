@@ -92,7 +92,8 @@ backup:
   retentionDays: 14
   storageClass: longhorn
   size: 10Gi
-  image: docker.io/bitnamilegacy/mariadb:11.8.3-debian-12-r0
+  # Defaults to mariadb.image (provides mariadb-dump)
+  image: ""
 
 persistence:
   enabled: true
@@ -126,37 +127,46 @@ serviceAccount:
 
 
 mariadb:
-
+  # MariaDB from the official image (templates/mariadb.yaml). Set
+  # mariadb.auth.password / rootPassword in a separate values file.
   enabled: true
-
+  image: docker.io/library/mariadb:11.8.9
+  replicas: 1
   auth:
     database: mautic
     username: mautic
-    
-  primary:
+  persistence:
+    # Use an existing PVC instead of creating <fullname>-mariadb-data
+    existingClaim: ""
+    # Data dir inside the volume ("" = volume root)
+    subPath: ""
+    storageClass: longhorn
+    size: 20Gi
+  # Appended to the official image's config (/etc/mysql/conf.d/zz-mautic.cnf).
+  # Same server settings as under the Bitnami chart, minus its paths.
+  configuration: |
+    [mariadb]
+    skip-name-resolve
+    explicit_defaults_for_timestamp
+    max_allowed_packet=16M
+    character-set-server=UTF8
+    collation-server=utf8_general_ci
+    # Mautic tuning
+    innodb_buffer_pool_size=2G
+    max_connections=200
+    table_open_cache=4000
+    tmp_table_size=64M
+    max_heap_table_size=64M
 
-    persistence:
-      enabled: true
-      storageClass: longhorn
-      size: 20Gi
+    [client]
+    default-character-set=UTF8
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 3Gi
 
-
-redis:
-
-  enabled: true
-
-  architecture: standalone
-
-  auth:
-    enabled: true
-
-  master:
-
-    persistence:
-      enabled: true
-      storageClass: ""
-      accessMode: ReadWriteOnce
-      size: 5Gi
 cron:
 
   enabled: true

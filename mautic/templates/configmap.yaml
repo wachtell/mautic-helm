@@ -16,12 +16,6 @@ data:
 
   DOCKER_MAUTIC_ROLE: "mautic_web"
 
-  MAUTIC_REDIS_HOST: {{ include "mautic.redisHost" . }}
-
-  MAUTIC_REDIS_PORT: "6379"
-
-  MAUTIC_REDIS_PRIMARY_ONLY: "false"
-
   # Cloudflare edges are proxies too when the site is served through Cloudflare
   MAUTIC_TRUSTED_PROXIES: {{ concat .Values.mautic.trustedProxies (.Values.cloudflare.enabled | ternary .Values.cloudflare.ipRanges list) | toJson | quote }}
 

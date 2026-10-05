@@ -86,24 +86,21 @@ PVC names
 {{- end -}}
 
 {{/*
-Subchart secret names (created by the Bitnami MariaDB/Redis charts)
+MariaDB Secret (keeps the Bitnami chart's name and keys) and pod labels
 */}}
 {{- define "mautic.mariadbSecretName" -}}
 {{- .Values.mariadb.auth.existingSecret | default (printf "%s-mariadb" .Release.Name) -}}
 {{- end -}}
 
-{{- define "mautic.redisSecretName" -}}
-{{- .Values.redis.auth.existingSecret | default (printf "%s-redis" .Release.Name) -}}
-{{- end -}}
-
-{{- define "mautic.redisHost" -}}
-{{- printf "%s-redis-master" .Release.Name -}}
+{{- define "mautic.mariadbSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "mautic.name" . }}-mariadb
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: database
 {{- end -}}
 
 
 {{/*
-Credential env vars, read from the subchart secrets.
-Must come before any env var that references them with $(VAR).
+Credential env vars, read from the MariaDB Secret.
 */}}
 {{- define "mautic.secretEnv" -}}
 - name: MAUTIC_DB_PASSWORD
@@ -111,15 +108,6 @@ Must come before any env var that references them with $(VAR).
     secretKeyRef:
       name: {{ include "mautic.mariadbSecretName" . }}
       key: mariadb-password
-- name: MAUTIC_REDIS_PASSWORD
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "mautic.redisSecretName" . }}
-      key: {{ .Values.redis.auth.existingSecretPasswordKey | default "redis-password" }}
-- name: MAUTIC_REDIS_DSN
-  value: "redis://:$(MAUTIC_REDIS_PASSWORD)@{{ include "mautic.redisHost" . }}:6379"
-- name: MAUTIC_CACHE_ADAPTER_REDIS
-  value: '{"adapter":"cache.adapter.redis","dsn":"redis://:$(MAUTIC_REDIS_PASSWORD)@{{ include "mautic.redisHost" . }}:6379"}'
 {{- end -}}
 
 
@@ -158,7 +146,7 @@ The credential Secrets belong to the subcharts, so hash the values that feed the
 checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
 checksum/php-opcache: {{ include (print .Template.BasePath "/php-opcache-configmap.yaml") . | sha256sum }}
 checksum/php-session: {{ include (print .Template.BasePath "/php-session-configmap.yaml") . | sha256sum }}
-checksum/credentials: {{ list .Values.mariadb.auth .Values.redis.auth | toJson | sha256sum }}
+checksum/credentials: {{ .Values.mariadb.auth | toJson | sha256sum }}
 {{- end -}}
 
 

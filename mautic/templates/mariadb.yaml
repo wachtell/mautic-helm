@@ -1,0 +1,185 @@
+{{- if .Values.mariadb.enabled }}
+{{- $fullname := include "mautic.fullname" . }}
+{{- $dbName := printf "%s-mariadb" .Release.Name }}
+# MariaDB from the official image (replaces the Bitnami subchart, whose images
+# are frozen). Secret and Service keep the Bitnami names/keys so Mautic, the
+# backup and the migrate job are unaffected.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "mautic.mariadbSecretName" . }}
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+type: Opaque
+stringData:
+  mariadb-password: {{ required "mariadb.auth.password is required (values-secret.yaml)" .Values.mariadb.auth.password | quote }}
+  mariadb-root-password: {{ required "mariadb.auth.rootPassword is required (values-secret.yaml)" .Values.mariadb.auth.rootPassword | quote }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-mariadb
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+data:
+  zz-mautic.cnf: |
+    {{- .Values.mariadb.configuration | nindent 4 }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $dbName }}
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "mautic.mariadbSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-mariadb-headless
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  clusterIP: None
+  selector:
+    {{- include "mautic.mariadbSelectorLabels" . | nindent 4 }}
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+
+{{- if not .Values.mariadb.persistence.existingClaim }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullname }}-mariadb-data
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.mariadb.persistence.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.mariadb.persistence.size }}
+{{- end }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $fullname }}-mariadb
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  # 0 lets the switch from the Bitnami StatefulSet happen without both
+  # servers touching the volume at once (see docs/mariadb-official-image.md)
+  replicas: {{ .Values.mariadb.replicas }}
+  serviceName: {{ $fullname }}-mariadb-headless
+  selector:
+    matchLabels:
+      {{- include "mautic.mariadbSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mautic.mariadbSelectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ .Values.mariadb.configuration | sha256sum }}
+    spec:
+      # Clean InnoDB shutdown on stop
+      terminationGracePeriodSeconds: 120
+      # uid/gid 1001 like the Bitnami image, so the existing data keeps its
+      # ownership (and a rollback to Bitnami stays possible). The official
+      # image runs fine as any uid; /run/mysqld is world-writable.
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 1001
+        runAsNonRoot: true
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: mariadb
+          image: {{ .Values.mariadb.image | quote }}
+          imagePullPolicy: IfNotPresent
+          env:
+            # Only used to initialise an empty data dir
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mautic.mariadbSecretName" . }}
+                  key: mariadb-root-password
+            - name: MARIADB_DATABASE
+              value: {{ .Values.mariadb.auth.database | quote }}
+            - name: MARIADB_USER
+              value: {{ .Values.mariadb.auth.username | quote }}
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mautic.mariadbSecretName" . }}
+                  key: mariadb-password
+            # Run mariadb-upgrade when the server version changes
+            - name: MARIADB_AUTO_UPGRADE
+              value: "1"
+          ports:
+            - name: mysql
+              containerPort: 3306
+          # "ping" succeeds once the server accepts connections, even when the
+          # login itself is refused, so no credentials are needed here
+          startupProbe:
+            exec:
+              command: ["mariadb-admin", "ping", "-h", "127.0.0.1", "--silent"]
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            exec:
+              command: ["mariadb-admin", "ping", "-h", "127.0.0.1", "--silent"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["mariadb-admin", "ping", "-h", "127.0.0.1", "--silent"]
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.mariadb.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+              {{- with .Values.mariadb.persistence.subPath }}
+              subPath: {{ . }}
+              {{- end }}
+            - name: config
+              mountPath: /etc/mysql/conf.d/zz-mautic.cnf
+              subPath: zz-mautic.cnf
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.mariadb.persistence.existingClaim | default (printf "%s-mariadb-data" $fullname) }}
+        - name: config
+          configMap:
+            name: {{ $fullname }}-mariadb
+        - name: tmp
+          emptyDir: {}
+{{- end }}

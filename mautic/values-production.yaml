@@ -91,7 +91,8 @@ backup:
   retentionDays: 14
   storageClass: longhorn
   size: 10Gi
-  image: docker.io/bitnamilegacy/mariadb:11.8.3-debian-12-r0
+  # Defaults to mariadb.image (provides mariadb-dump)
+  image: ""
 
 persistence:
   enabled: true
@@ -132,89 +133,45 @@ env:
   DOCKER_MAUTIC_ROLE: mautic_web
 
 mariadb:
+  # MariaDB from the official image (templates/mariadb.yaml). Passwords:
+  # mariadb.auth.password / rootPassword in values-secret.yaml.
   enabled: true
-  image:
-    registry: docker.io
-    repository: bitnamilegacy/mariadb
-    tag: 11.8.3-debian-12-r0
-  volumePermissions:
-    enabled: false
+  image: docker.io/library/mariadb:11.8.9
+  replicas: 1
   auth:
     database: mautic
     username: mautic
-  primary:
-    # Replaces the chart's whole my.cnf: Bitnami defaults (mariadb 21.0.8) + Mautic tuning
-    configuration: |-
-      [mysqld]
-      skip-name-resolve
-      explicit_defaults_for_timestamp
-      basedir=/opt/bitnami/mariadb
-      datadir=/bitnami/mariadb/data
-      plugin_dir=/opt/bitnami/mariadb/plugin
-      port={{ .Values.primary.containerPorts.mysql }}
-      socket=/opt/bitnami/mariadb/tmp/mysql.sock
-      tmpdir=/opt/bitnami/mariadb/tmp
-      max_allowed_packet=16M
-      bind-address=*
-      pid-file=/opt/bitnami/mariadb/tmp/mysqld.pid
-      log-error=/opt/bitnami/mariadb/logs/mysqld.log
-      character-set-server=UTF8
-      collation-server=utf8_general_ci
-      slow_query_log=0
-      long_query_time=10.0
-      binlog_expire_logs_seconds=2592000
-      # Mautic tuning
-      innodb_buffer_pool_size=2G
-      max_connections=200
-      table_open_cache=4000
-      tmp_table_size=64M
-      max_heap_table_size=64M
+  persistence:
+    # Volume created by the former Bitnami chart; it keeps the data in data/
+    existingClaim: data-mautic-mariadb-0
+    subPath: data
+    storageClass: longhorn
+    size: 20Gi
+  # Appended to the official image's config (/etc/mysql/conf.d/zz-mautic.cnf).
+  # Same server settings as under the Bitnami chart, minus its paths.
+  configuration: |
+    [mariadb]
+    skip-name-resolve
+    explicit_defaults_for_timestamp
+    max_allowed_packet=16M
+    character-set-server=UTF8
+    collation-server=utf8_general_ci
+    # Mautic tuning
+    innodb_buffer_pool_size=2G
+    max_connections=200
+    table_open_cache=4000
+    tmp_table_size=64M
+    max_heap_table_size=64M
 
-      [client]
-      port=3306
-      socket=/opt/bitnami/mariadb/tmp/mysql.sock
-      default-character-set=UTF8
-      plugin_dir=/opt/bitnami/mariadb/plugin
-
-      [manager]
-      port=3306
-      socket=/opt/bitnami/mariadb/tmp/mysql.sock
-      pid-file=/opt/bitnami/mariadb/tmp/mysqld.pid
-    persistence:
-      enabled: true
-      storageClass: longhorn
-      accessMode: ReadWriteOnce
-      size: 20Gi
-    resources:
-      requests:
-        cpu: "1000m"
-        memory: "2Gi"
-      limits:
-        cpu: "4000m"
-        memory: "6Gi"
-
-redis:
-  enabled: true
-  image:
-    registry: docker.io
-    repository: bitnamilegacy/redis
-    tag: 8.2.1-debian-12-r0
-  architecture: standalone
-  auth:
-    enabled: true
-  master:
-    persistence:
-      enabled: true
-      storageClass: longhorn
-      accessMode: ReadWriteOnce
-      size: 5Gi
-    resources:
-      requests:
-        cpu: 250m
-        memory: 512Mi
-      limits:
-        cpu: 1000m
-        memory: 2Gi
+    [client]
+    default-character-set=UTF8
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "2Gi"
+    limits:
+      cpu: "4000m"
+      memory: "6Gi"
 
 cron:
   enabled: true

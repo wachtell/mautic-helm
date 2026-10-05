@@ -44,7 +44,7 @@ spec:
             fsGroup: 1001
           containers:
             - name: db-backup
-              image: {{ .Values.backup.image | quote }}
+              image: {{ .Values.backup.image | default .Values.mariadb.image | quote }}
               env:
                 - name: DB_HOST
                   value: {{ .Release.Name }}-mariadb

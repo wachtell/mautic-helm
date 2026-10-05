@@ -6,7 +6,7 @@ description: Production-ready Helm chart for Mautic
 
 type: application
 
-version: 0.1.0
+version: 0.2.0
 
 appVersion: "7.2.1"
 
@@ -26,13 +26,3 @@ sources:
 maintainers:
   - name: Kristian Wachtell
 
-dependencies:
-  - name: mariadb
-    version: "21.x.x"
-    repository: https://charts.bitnami.com/bitnami
-    condition: mariadb.enabled
-
-  - name: redis
-    version: "22.x.x"
-    repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled
