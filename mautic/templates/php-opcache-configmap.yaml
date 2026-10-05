@@ -16,9 +16,12 @@ data:
     ; Number of cached PHP scripts
     opcache.max_accelerated_files=30000
 
-    ; Production setting
-    opcache.validate_timestamps=0
-    opcache.revalidate_freq=0
+    ; config/local.php and var/cache are shared between pods and rewritten at
+    ; runtime (UI config saves, cache rebuilds). With validate_timestamps=0 the
+    ; other pods would keep running the old files until restarted, so recheck
+    ; changed files every 2s instead.
+    opcache.validate_timestamps=1
+    opcache.revalidate_freq=2
 
     ; Keep comments needed by some frameworks
     opcache.save_comments=1
