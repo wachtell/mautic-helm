@@ -169,3 +169,24 @@ relative to the shared var/ volume
 {{- define "mautic.grapesjsSubPath" -}}
 {{- printf "grapesjs/%s/dist" .Values.grapesjsAssets.version -}}
 {{- end -}}
+
+
+{{/*
+Web container start: the image's web entrypoint runs Doctrine migrations on
+every start, so with several pods they run concurrently. When the chart runs
+them once per upgrade (db-migrate job), drop that block from the entrypoint
+and keep everything else (volume/env/DB checks, apache). If upstream changes
+the script so the block isn't found, migrations simply keep running as before.
+*/}}
+{{- define "mautic.webCommand" -}}
+- /bin/bash
+- -c
+- |
+  sed -i '/^# run migrations/,/^fi$/d' /entrypoint_mautic_web.sh
+  if grep -q 'migrations:migrate' /entrypoint_mautic_web.sh; then
+    echo "WARNING: could not disable entrypoint migrations; they will run in this pod" >&2
+  else
+    echo "Entrypoint migrations disabled (run once per upgrade by the db-migrate job)"
+  fi
+  exec /entrypoint.sh
+{{- end -}}

@@ -113,13 +113,16 @@ assets:
   build:
     enabled: true
   
+# Web pods idle at ~160Mi; a single heavy PHP request may use up to
+# memory_limit (512M), so leave headroom for a few concurrent ones.
+# The HPA scales on CPU relative to the request (75% of 500m).
 resources:
   requests:
-    cpu: 1000m
-    memory: 3Gi
+    cpu: 500m
+    memory: 768Mi
   limits:
-    cpu: "4000m"
-    memory: 6Gi
+    cpu: "2"
+    memory: 2Gi
 
 serviceAccount:
   create: true
@@ -280,6 +283,12 @@ grapesjsAssets:
   enabled: true
   version: "7.2.1"
   sha256: 5c86cf1fe8b4f9818232ce8bb755760f502d47846706e9164d144865d031ecbd
+
+migrations:
+  # Run Doctrine migrations once per upgrade in a pre-upgrade hook Job instead
+  # of in every web pod's entrypoint (concurrent runs race)
+  enabled: true
+  timeoutSeconds: 900
 
 autoscaling:
   enabled: true

@@ -254,6 +254,12 @@ grapesjsAssets:
   version: "7.2.1"
   sha256: 5c86cf1fe8b4f9818232ce8bb755760f502d47846706e9164d144865d031ecbd
 
+migrations:
+  # Run Doctrine migrations once per upgrade in a pre-upgrade hook Job instead
+  # of in every web pod's entrypoint (concurrent runs race)
+  enabled: true
+  timeoutSeconds: 900
+
 autoscaling:
 
   enabled: true

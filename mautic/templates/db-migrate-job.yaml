@@ -1,0 +1,71 @@
+{{- if .Values.migrations.enabled }}
+# Runs Doctrine migrations once per upgrade, with the new image, before the
+# web pods roll. The image's web entrypoint would otherwise run them in every
+# web pod at the same time (see mautic.webCommand), which races.
+# pre-upgrade only: on a fresh install Mautic isn't installed yet.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "mautic.fullname" . }}-db-migrate
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: {{ .Values.migrations.timeoutSeconds }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "mautic.name" . }}-db-migrate
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: db-migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        {{- include "mautic.wwwDataSecurityContext" . | nindent 8 }}
+      containers:
+        - name: migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "mautic.fullname" . }}-config
+          env:
+            {{- include "mautic.secretEnv" . | nindent 12 }}
+            # Pre-upgrade hooks run before the ConfigMap is updated, so set the
+            # new version's cache dir explicitly instead of inheriting the old one.
+            - name: MAUTIC_CONFIG_PARAMETERS
+              value: {{ dict "cache_path" (include "mautic.cachePath" .) | toJson | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              if ! php -r "include('/var/www/html/config/local.php'); exit(!empty(\$parameters['db_driver']) && !empty(\$parameters['site_url']) ? 0 : 1);"; then
+                echo "Mautic is not installed yet, nothing to migrate."
+                exit 0
+              fi
+              php /var/www/html/bin/console doctrine:migrations:migrate -n --allow-no-migration
+          resources:
+            {{- toYaml (.Values.cron.resources | default .Values.resources) | nindent 12 }}
+          volumeMounts:
+            - name: mautic-config
+              mountPath: /var/www/html/config
+            - name: mautic-data
+              mountPath: /var/www/html/var
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media
+      volumes:
+        - name: mautic-config
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.configPVC" . }}
+        - name: mautic-data
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.dataPVC" . }}
+        - name: mautic-media
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.mediaPVC" . }}
+{{- end }}
