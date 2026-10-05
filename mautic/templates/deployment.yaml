@@ -38,6 +38,24 @@ spec:
 
     spec:
 
+      initContainers:
+        # PHP doesn't create session.save_path itself
+        - name: prepare-sessions-dir
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- include "mautic.wwwDataSecurityContext" . | nindent 12 }}
+          command: ["mkdir", "-p", {{ include "mautic.sessionPath" . | quote }}]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: mautic-data
+              mountPath: /var/www/html/var
+
       containers:
 
         - name: mautic
@@ -73,6 +91,10 @@ spec:
               mountPath: /usr/local/etc/php/conf.d/opcache.ini
               subPath: opcache.ini
 
+            - name: php-session
+              mountPath: /usr/local/etc/php/conf.d/zz-session.ini
+              subPath: session.ini
+
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 
@@ -106,3 +128,7 @@ spec:
         - name: php-opcache
           configMap:
             name: {{ include "mautic.fullname" . }}-php-opcache
+
+        - name: php-session
+          configMap:
+            name: {{ include "mautic.fullname" . }}-php-session

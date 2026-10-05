@@ -130,6 +130,10 @@ Per-image-version Symfony cache dir on the shared var/ volume
 /var/www/html/var/cache
 {{- end -}}
 
+{{- define "mautic.sessionPath" -}}
+/var/www/html/var/sessions
+{{- end -}}
+
 {{- define "mautic.cachePath" -}}
 {{- printf "%s/%s" (include "mautic.cacheRoot" .) (.Values.image.tag | replace "/" "-") -}}
 {{- end -}}
@@ -153,5 +157,6 @@ The credential Secrets belong to the subcharts, so hash the values that feed the
 {{- define "mautic.checksums" -}}
 checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
 checksum/php-opcache: {{ include (print .Template.BasePath "/php-opcache-configmap.yaml") . | sha256sum }}
+checksum/php-session: {{ include (print .Template.BasePath "/php-session-configmap.yaml") . | sha256sum }}
 checksum/credentials: {{ list .Values.mariadb.auth .Values.redis.auth | toJson | sha256sum }}
 {{- end -}}
