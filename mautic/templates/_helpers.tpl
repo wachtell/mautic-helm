@@ -84,3 +84,40 @@ PVC names
 {{ include "mautic.fullname" . }}-data
 {{- end -}}
 {{- end -}}
+
+{{/*
+Subchart secret names (created by the Bitnami MariaDB/Redis charts)
+*/}}
+{{- define "mautic.mariadbSecretName" -}}
+{{- .Values.mariadb.auth.existingSecret | default (printf "%s-mariadb" .Release.Name) -}}
+{{- end -}}
+
+{{- define "mautic.redisSecretName" -}}
+{{- .Values.redis.auth.existingSecret | default (printf "%s-redis" .Release.Name) -}}
+{{- end -}}
+
+{{- define "mautic.redisHost" -}}
+{{- printf "%s-redis-master" .Release.Name -}}
+{{- end -}}
+
+
+{{/*
+Credential env vars, read from the subchart secrets.
+Must come before any env var that references them with $(VAR).
+*/}}
+{{- define "mautic.secretEnv" -}}
+- name: MAUTIC_DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "mautic.mariadbSecretName" . }}
+      key: mariadb-password
+- name: MAUTIC_REDIS_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "mautic.redisSecretName" . }}
+      key: {{ .Values.redis.auth.existingSecretPasswordKey | default "redis-password" }}
+- name: MAUTIC_REDIS_DSN
+  value: "redis://:$(MAUTIC_REDIS_PASSWORD)@{{ include "mautic.redisHost" . }}:6379"
+- name: MAUTIC_CACHE_ADAPTER_REDIS
+  value: '{"adapter":"cache.adapter.redis","dsn":"redis://:$(MAUTIC_REDIS_PASSWORD)@{{ include "mautic.redisHost" . }}:6379"}'
+{{- end -}}

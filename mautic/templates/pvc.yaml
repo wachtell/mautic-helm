@@ -8,6 +8,8 @@ metadata:
   name: {{ include "mautic.mediaPVC" . }}
   labels:
     {{- include "mautic.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
 
 spec:
   accessModes:
@@ -28,6 +30,8 @@ metadata:
   name: {{ include "mautic.configPVC" . }}
   labels:
     {{- include "mautic.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
 
 spec:
   accessModes:
@@ -48,6 +52,8 @@ metadata:
   name: {{ include "mautic.dataPVC" . }}
   labels:
     {{- include "mautic.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
 
 spec:
   accessModes:

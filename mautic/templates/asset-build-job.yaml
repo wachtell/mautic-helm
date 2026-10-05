@@ -12,8 +12,11 @@ spec:
   backoffLimit: 3
   template:
     metadata:
+      # Must not match mautic.selectorLabels, or the Service routes traffic to this pod
       labels:
-        {{- include "mautic.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ include "mautic.name" . }}-assets
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: asset-build
     spec:
       restartPolicy: OnFailure
       containers:

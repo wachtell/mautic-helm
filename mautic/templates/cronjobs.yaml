@@ -48,10 +48,8 @@ spec:
             - configMapRef:
                 name: {{ include "mautic.fullname" $ }}-config
 
-            - secretRef:
-                name: {{ include "mautic.fullname" $ }}-secret
-
             env:
+{{- include "mautic.secretEnv" $ | nindent 12 }}
             - name: DOCKER_MAUTIC_ROLE
               value: mautic_cron
 

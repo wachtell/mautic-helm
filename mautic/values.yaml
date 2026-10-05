@@ -153,6 +153,10 @@ cron:
 
       command: mautic:maintenance:cleanup
 
+assets:
+  build:
+    enabled: false
+
 autoscaling:
 
   enabled: true

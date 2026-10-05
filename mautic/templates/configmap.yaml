@@ -16,7 +16,7 @@ data:
 
   DOCKER_MAUTIC_ROLE: "mautic_web"
 
-  MAUTIC_REDIS_HOST: {{ include "mautic.fullname" . }}-redis-master
+  MAUTIC_REDIS_HOST: {{ include "mautic.redisHost" . }}
 
   MAUTIC_REDIS_PORT: "6379"
 

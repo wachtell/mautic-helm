@@ -82,18 +82,48 @@ mariadb:
     database: mautic
     username: mautic
   primary:
+    # Replaces the chart's whole my.cnf: Bitnami defaults (mariadb 21.0.8) + Mautic tuning
+    configuration: |-
+      [mysqld]
+      skip-name-resolve
+      explicit_defaults_for_timestamp
+      basedir=/opt/bitnami/mariadb
+      datadir=/bitnami/mariadb/data
+      plugin_dir=/opt/bitnami/mariadb/plugin
+      port={{ .Values.primary.containerPorts.mysql }}
+      socket=/opt/bitnami/mariadb/tmp/mysql.sock
+      tmpdir=/opt/bitnami/mariadb/tmp
+      max_allowed_packet=16M
+      bind-address=*
+      pid-file=/opt/bitnami/mariadb/tmp/mysqld.pid
+      log-error=/opt/bitnami/mariadb/logs/mysqld.log
+      character-set-server=UTF8
+      collation-server=utf8_general_ci
+      slow_query_log=0
+      long_query_time=10.0
+      binlog_expire_logs_seconds=2592000
+      # Mautic tuning
+      innodb_buffer_pool_size=2G
+      max_connections=200
+      table_open_cache=4000
+      tmp_table_size=64M
+      max_heap_table_size=64M
+
+      [client]
+      port=3306
+      socket=/opt/bitnami/mariadb/tmp/mysql.sock
+      default-character-set=UTF8
+      plugin_dir=/opt/bitnami/mariadb/plugin
+
+      [manager]
+      port=3306
+      socket=/opt/bitnami/mariadb/tmp/mysql.sock
+      pid-file=/opt/bitnami/mariadb/tmp/mysqld.pid
     persistence:
-      configuration: |- 
-        [mysqld]
-        innodb_buffer_pool_size=2G
-        max_connections=200
-        table_open_cache=4000
-        tmp_table_size=64M
-        max_heap_table_size=64M
-        enabled: true
-        storageClass: longhorn
-        accessMode: ReadWriteOnce
-        size: 20Gi
+      enabled: true
+      storageClass: longhorn
+      accessMode: ReadWriteOnce
+      size: 20Gi
     resources:
       requests:
         cpu: "1000m"
