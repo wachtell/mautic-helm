@@ -1,0 +1,91 @@
+{{- if .Values.backup.enabled }}
+# Nightly logical dump of the Mautic database to its own PVC.
+# Same cluster/storage as the DB: pair with a Longhorn backup target (or copy
+# the files elsewhere) to survive losing the cluster.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "mautic.fullname" . }}-db-backup
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.backup.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.backup.size }}
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "mautic.fullname" . }}-db-backup
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: "Europe/Copenhagen"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            runAsNonRoot: true
+            fsGroup: 1001
+          containers:
+            - name: db-backup
+              image: {{ .Values.backup.image | quote }}
+              env:
+                - name: DB_HOST
+                  value: {{ .Release.Name }}-mariadb
+                - name: DB_USER
+                  value: {{ .Values.mariadb.auth.username | quote }}
+                - name: DB_NAME
+                  value: {{ .Values.mariadb.auth.database | quote }}
+                # Read by the MariaDB client, keeps the password off the command line
+                - name: MYSQL_PWD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "mautic.mariadbSecretName" . }}
+                      key: mariadb-password
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  f=/backup/mautic-$(date +%Y%m%d-%H%M%S).sql.gz
+                  mariadb-dump -h "$DB_HOST" -u "$DB_USER" \
+                    --single-transaction --routines --events --triggers --no-tablespaces \
+                    --databases "$DB_NAME" | gzip > "$f.partial"
+                  mv "$f.partial" "$f"
+                  find /backup -name 'mautic-*.sql.gz' -mtime +{{ .Values.backup.retentionDays }} -print -delete
+                  find /backup -name '*.partial' -mmin +60 -delete
+                  ls -lh /backup
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 512Mi
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: {{ include "mautic.fullname" . }}-db-backup
+            - name: tmp
+              emptyDir: {}
+{{- end }}

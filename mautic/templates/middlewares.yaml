@@ -1,0 +1,99 @@
+{{- if .Values.ingressRoute.enabled }}
+{{- $mw := printf "%s-" (include "mautic.fullname" .) }}
+# Traefik only resolves Middlewares in the IngressRoute's own namespace
+# (no allowCrossNamespace), so these live next to Mautic.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $mw }}deny-all
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  # No client matches, so every request gets 403
+  ipAllowList:
+    sourceRange:
+      - 127.0.0.1/32
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $mw }}public-headers
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  # No frame restrictions: Mautic forms and landing pages get embedded on other sites
+  headers:
+    stsSeconds: 31536000
+    stsIncludeSubdomains: false
+    contentTypeNosniff: true
+    referrerPolicy: strict-origin-when-cross-origin
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $mw }}admin-headers
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  headers:
+    stsSeconds: 31536000
+    stsIncludeSubdomains: false
+    contentTypeNosniff: true
+    referrerPolicy: strict-origin-when-cross-origin
+    customFrameOptionsValue: SAMEORIGIN
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $mw }}form-ratelimit
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  rateLimit:
+    average: {{ .Values.ingressRoute.formRateLimit.average }}
+    period: {{ .Values.ingressRoute.formRateLimit.period }}
+    burst: {{ .Values.ingressRoute.formRateLimit.burst }}
+    {{- with .Values.ingressRoute.clientIpHeader }}
+    # Behind Cloudflare every request arrives from a Cloudflare IP; key on the real client
+    sourceCriterion:
+      requestHeaderName: {{ . }}
+    {{- end }}
+
+{{- if .Values.authentik.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $mw }}authentik-forward-auth
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  forwardAuth:
+    address: http://{{ .Values.authentik.outpost.host }}:{{ .Values.authentik.outpost.port }}/outpost.goauthentik.io/auth/traefik
+    trustForwardHeader: true
+    authResponseHeaders:
+      - X-authentik-username
+      - X-authentik-groups
+      - X-authentik-email
+      - X-authentik-name
+      - X-authentik-uid
+
+---
+# The outpost lives in another namespace; IngressRoute services must be local
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mautic.fullname" . }}-authentik-outpost
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  type: ExternalName
+  externalName: {{ .Values.authentik.outpost.host }}
+  ports:
+    - name: http
+      port: {{ .Values.authentik.outpost.port }}
+{{- end }}
+{{- end }}

@@ -22,11 +22,12 @@ data:
 
   MAUTIC_REDIS_PRIMARY_ONLY: "false"
 
-  MAUTIC_TRUSTED_PROXIES: {{ .Values.mautic.trustedProxies | toJson | quote }}
+  # Cloudflare edges are proxies too when the site is served through Cloudflare
+  MAUTIC_TRUSTED_PROXIES: {{ concat .Values.mautic.trustedProxies (.Values.cloudflare.enabled | ternary .Values.cloudflare.ipRanges list) | toJson | quote }}
 
   MAUTIC_TRUSTED_HOSTS: {{ .Values.mautic.trustedHosts | toJson | quote }}
 
-  MAUTIC_BASE_URL: https://mautic.wachtell.net
+  MAUTIC_BASE_URL: {{ printf "https://%s" .Values.ingressRoute.host | quote }}
 
   # var/ is shared across pods (RWX), so give each image version its own
   # Symfony cache dir; a new version never loads a container compiled by

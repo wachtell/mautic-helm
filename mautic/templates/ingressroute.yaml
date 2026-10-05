@@ -1,16 +1,22 @@
+{{- if .Values.ingressRoute.enabled }}
+{{- $host := .Values.ingressRoute.host }}
+{{- $svc := include "mautic.fullname" . }}
+{{- $mw := printf "%s-" (include "mautic.fullname" .) }}
+{{- /* Matches /x, /x/... and /index.php/x/... for each listed path, and nothing longer (/s must not match /sale) */}}
+{{- $protected := printf "^/(index\\.php/)?(%s)(/|$)" (join "|" .Values.ingressRoute.protectedPaths) }}
+{{- $blocked := printf "^/(index\\.php/)?(%s)(/|$)" (join "|" .Values.ingressRoute.blockedPaths) }}
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 
 metadata:
-  name: {{ include "mautic.fullname" . }}
+  name: {{ $svc }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "mautic.labels" . | nindent 4 }}
-  metadata:
+  {{- with .Values.ingressRoute.annotations }}
   annotations:
-    {{- with .Values.ingressRoute.annotations }}
     {{- toYaml . | nindent 4 }}
-    {{- end }}
+  {{- end }}
 
 spec:
   entryPoints:
@@ -19,11 +25,63 @@ spec:
     {{- end }}
 
   routes:
-    - match: Host(`{{ .Values.ingressRoute.host }}`)
+    # Never reachable (installer etc.)
+    - match: Host(`{{ $host }}`) && PathRegexp(`{{ $blocked }}`)
       kind: Rule
+      priority: 300
+      middlewares:
+        - name: {{ $mw }}deny-all
       services:
-        - name: {{ include "mautic.fullname" . }}
+        - name: {{ $svc }}
           port: {{ .Values.service.port }}
 
+    {{- if .Values.authentik.enabled }}
+    # authentik forward-auth callback/sign-in endpoints
+    - match: Host(`{{ $host }}`) && PathPrefix(`/outpost.goauthentik.io/`)
+      kind: Rule
+      priority: 250
+      services:
+        - name: {{ $svc }}-authentik-outpost
+          port: {{ .Values.authentik.outpost.port }}
+    {{- end }}
+
+    # Admin UI and API: behind authentik
+    - match: Host(`{{ $host }}`) && PathRegexp(`{{ $protected }}`)
+      kind: Rule
+      priority: 200
+      middlewares:
+        {{- if .Values.authentik.enabled }}
+        - name: {{ $mw }}authentik-forward-auth
+        {{- end }}
+        - name: {{ $mw }}admin-headers
+      services:
+        - name: {{ $svc }}
+          port: {{ .Values.service.port }}
+
+    # Public form submissions: rate limited
+    - match: Host(`{{ $host }}`) && PathRegexp(`^/(index\.php/)?form/submit`)
+      kind: Rule
+      priority: 150
+      middlewares:
+        - name: {{ $mw }}form-ratelimit
+        - name: {{ $mw }}public-headers
+      services:
+        - name: {{ $svc }}
+          port: {{ .Values.service.port }}
+
+    # Everything else is public: email open/click tracking, unsubscribe,
+    # forms, landing pages, assets, website tracking
+    - match: Host(`{{ $host }}`)
+      kind: Rule
+      priority: 10
+      middlewares:
+        - name: {{ $mw }}public-headers
+      services:
+        - name: {{ $svc }}
+          port: {{ .Values.service.port }}
+
+  {{- if .Values.ingressRoute.tls.enabled }}
   tls:
     secretName: {{ .Values.ingressRoute.tls.secretName }}
+  {{- end }}
+{{- end }}
