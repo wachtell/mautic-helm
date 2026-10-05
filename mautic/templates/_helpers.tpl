@@ -160,3 +160,12 @@ checksum/php-opcache: {{ include (print .Template.BasePath "/php-opcache-configm
 checksum/php-session: {{ include (print .Template.BasePath "/php-session-configmap.yaml") . | sha256sum }}
 checksum/credentials: {{ list .Values.mariadb.auth .Values.redis.auth | toJson | sha256sum }}
 {{- end -}}
+
+
+{{/*
+GrapesJS builder assets fetched by the grapesjs-assets job, per Mautic version,
+relative to the shared var/ volume
+*/}}
+{{- define "mautic.grapesjsSubPath" -}}
+{{- printf "grapesjs/%s/dist" .Values.grapesjsAssets.version -}}
+{{- end -}}

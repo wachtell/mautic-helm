@@ -1,0 +1,88 @@
+{{- if .Values.grapesjsAssets.enabled }}
+# The official 7.2.x Docker image ships without the compiled GrapesJS builder
+# assets (mautic/docker-mautic#479), so the email builder refuses to open
+# ("Please enable the GrapesJS builder plugin"). Fetch them once per version
+# from the official release ZIP, verify its checksum, and put them on the
+# shared var/ volume; the web pods mount that dir where Mautic expects it.
+# Disable once the image includes them again.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "mautic.fullname" . }}-grapesjs-assets
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "mautic.name" . }}-grapesjs-assets
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: grapesjs-assets
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        {{- include "mautic.wwwDataSecurityContext" . | nindent 8 }}
+      containers:
+        - name: fetch
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: RELEASE_URL
+              value: {{ printf "https://github.com/mautic/mautic/releases/download/%s/%s.zip" .Values.grapesjsAssets.version .Values.grapesjsAssets.version | quote }}
+            - name: RELEASE_SHA256
+              value: {{ required "grapesjsAssets.sha256 is required" .Values.grapesjsAssets.sha256 | quote }}
+            - name: DEST
+              value: {{ printf "/var/www/html/var/%s" (include "mautic.grapesjsSubPath" .) | quote }}
+          command:
+            - php
+            - -r
+            - |
+              $dest = getenv('DEST');
+              if (is_file("$dest/manifest.json")) { echo "GrapesJS assets already present in $dest\n"; exit(0); }
+              $zipFile = '/tmp/release.zip';
+              echo "Downloading ".getenv('RELEASE_URL')."\n";
+              if (!copy(getenv('RELEASE_URL'), $zipFile)) { fwrite(STDERR, "download failed\n"); exit(1); }
+              if (!hash_equals(getenv('RELEASE_SHA256'), hash_file('sha256', $zipFile))) { fwrite(STDERR, "checksum mismatch\n"); exit(2); }
+              $zip = new ZipArchive();
+              if (true !== $zip->open($zipFile)) { fwrite(STDERR, "cannot open zip\n"); exit(3); }
+              $prefix = 'plugins/GrapesJsBuilderBundle/Assets/library/js/dist/';
+              $tmp = "$dest.partial";
+              @mkdir($tmp, 0755, true);
+              $n = 0;
+              for ($i = 0; $i < $zip->numFiles; ++$i) {
+                  $name = $zip->getNameIndex($i);
+                  if (!str_starts_with($name, $prefix) || str_ends_with($name, '/')) { continue; }
+                  file_put_contents($tmp.'/'.basename($name), $zip->getFromIndex($i));
+                  echo "  ".basename($name)."\n";
+                  ++$n;
+              }
+              if (!is_file("$tmp/manifest.json")) { fwrite(STDERR, "manifest.json not found in release\n"); exit(4); }
+              // The web pods already mount $dest; fill it in place, manifest last
+              @mkdir($dest, 0755, true);
+              foreach (glob("$tmp/*") as $f) { if (basename($f) !== 'manifest.json') { rename($f, $dest.'/'.basename($f)); } }
+              rename("$tmp/manifest.json", "$dest/manifest.json");
+              @rmdir($tmp);
+              echo "Installed $n GrapesJS asset files into $dest\n";
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: mautic-data
+              mountPath: /var/www/html/var
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: mautic-data
+          persistentVolumeClaim:
+            claimName: {{ include "mautic.dataPVC" . }}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 512Mi
+{{- end }}

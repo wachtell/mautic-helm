@@ -245,6 +245,15 @@ worker:
       cpu: "1"
       memory: 1Gi
 
+grapesjsAssets:
+  # Official 7.2.x images lack the compiled GrapesJS email builder
+  # (mautic/docker-mautic#479). Fetch it from the release ZIP matching the
+  # image version. Update version + sha256 together with image.tag; disable
+  # once the image ships the assets again.
+  enabled: true
+  version: "7.2.1"
+  sha256: 5c86cf1fe8b4f9818232ce8bb755760f502d47846706e9164d144865d031ecbd
+
 autoscaling:
 
   enabled: true

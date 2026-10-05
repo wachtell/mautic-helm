@@ -39,13 +39,21 @@ spec:
     spec:
 
       initContainers:
-        # PHP doesn't create session.save_path itself
-        - name: prepare-sessions-dir
+        # Create dirs on the shared var/ volume as www-data before they're used:
+        # PHP doesn't create session.save_path, and kubelet would create a
+        # missing subPath dir as root
+        - name: prepare-shared-dirs
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             {{- include "mautic.wwwDataSecurityContext" . | nindent 12 }}
-          command: ["mkdir", "-p", {{ include "mautic.sessionPath" . | quote }}]
+          command:
+            - mkdir
+            - -p
+            - {{ include "mautic.sessionPath" . | quote }}
+            {{- if .Values.grapesjsAssets.enabled }}
+            - {{ printf "/var/www/html/var/%s" (include "mautic.grapesjsSubPath" .) | quote }}
+            {{- end }}
           resources:
             requests:
               cpu: 10m
@@ -94,6 +102,14 @@ spec:
             - name: php-session
               mountPath: /usr/local/etc/php/conf.d/zz-session.ini
               subPath: session.ini
+
+            {{- if .Values.grapesjsAssets.enabled }}
+            # Filled by the grapesjs-assets job (image lacks the compiled builder)
+            - name: mautic-data
+              mountPath: /var/www/html/docroot/plugins/GrapesJsBuilderBundle/Assets/library/js/dist
+              subPath: {{ include "mautic.grapesjsSubPath" . }}
+              readOnly: true
+            {{- end }}
 
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
