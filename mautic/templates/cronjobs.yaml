@@ -34,6 +34,9 @@ spec:
         spec:
           restartPolicy: OnFailure
 
+          securityContext:
+{{- include "mautic.wwwDataSecurityContext" $ | nindent 12 }}
+
           containers:
           - name: mautic-cron
 
@@ -54,7 +57,7 @@ spec:
               value: mautic_cron
 
             resources:
-{{- toYaml $.Values.resources | nindent 14 }}
+{{- toYaml ($.Values.cron.resources | default $.Values.resources) | nindent 14 }}
 
             volumeMounts:
             - name: mautic-media
@@ -80,4 +83,58 @@ spec:
               claimName: {{ include "mautic.dataPVC" $ }}
 
 {{- end }}
+
+---
+# Deletes Symfony cache dirs left behind by previous image versions
+# (see mautic.cachePath). Only dirs untouched for a day, so pods of the
+# previous version mid-rollout are never affected.
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: {{ include "mautic.fullname" . }}-cache-prune
+  labels:
+{{- include "mautic.labels" . | nindent 4 }}
+
+spec:
+  schedule: "30 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  timeZone: "Europe/Copenhagen"
+
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+
+          securityContext:
+{{- include "mautic.wwwDataSecurityContext" . | nindent 12 }}
+
+          containers:
+          - name: cache-prune
+            image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+            command:
+              - /bin/sh
+              - -c
+              - >-
+                find {{ include "mautic.cacheRoot" . }} -mindepth 1 -maxdepth 1 -type d
+                ! -name {{ base (include "mautic.cachePath" .) | quote }}
+                -mmin +1440 -print -exec rm -rf {} +
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+            volumeMounts:
+            - name: mautic-data
+              mountPath: /var/www/html/var
+
+          volumes:
+          - name: mautic-data
+            persistentVolumeClaim:
+              claimName: {{ include "mautic.dataPVC" . }}
 {{- end }}

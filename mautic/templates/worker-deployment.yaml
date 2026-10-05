@@ -1,54 +1,39 @@
+{{- if .Values.worker.enabled }}
+# Symfony Messenger consumers (email, hit, failed), using the image's
+# built-in mautic_worker role. Only needed when a queue transport is
+# configured; with the default sync:// transport messages never queue.
 apiVersion: apps/v1
-
 kind: Deployment
 
 metadata:
-
-  name: {{ include "mautic.fullname" . }}
-
+  name: {{ include "mautic.fullname" . }}-worker
   labels:
-
     {{- include "mautic.labels" . | nindent 4 }}
-
+    app.kubernetes.io/component: worker
 
 spec:
-
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
-
+  replicas: {{ .Values.worker.replicas }}
 
   selector:
-
     matchLabels:
-
-      {{- include "mautic.selectorLabels" . | nindent 6 }}
-
+      app.kubernetes.io/name: {{ include "mautic.name" . }}-worker
+      app.kubernetes.io/instance: {{ .Release.Name }}
 
   template:
-
     metadata:
+      # Must not match mautic.selectorLabels, or the Service routes traffic to this pod
       labels:
-
-        {{- include "mautic.selectorLabels" . | nindent 8 }}
-      
+        app.kubernetes.io/name: {{ include "mautic.name" . }}-worker
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: worker
       annotations:
         {{- include "mautic.checksums" . | nindent 8 }}
 
-
     spec:
-
       containers:
-
-        - name: mautic
-
+        - name: mautic-worker
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-
-          ports:
-            - name: http
-              containerPort: 80
 
           envFrom:
             - configMapRef:
@@ -57,52 +42,33 @@ spec:
           env:
             {{- include "mautic.secretEnv" . | nindent 12 }}
             - name: DOCKER_MAUTIC_ROLE
-              value: mautic_web
-                        
+              value: mautic_worker
+            - name: DOCKER_MAUTIC_WORKERS_CONSUME_EMAIL
+              value: {{ .Values.worker.consumers.email | quote }}
+            - name: DOCKER_MAUTIC_WORKERS_CONSUME_HIT
+              value: {{ .Values.worker.consumers.hit | quote }}
+            - name: DOCKER_MAUTIC_WORKERS_CONSUME_FAILED
+              value: {{ .Values.worker.consumers.failed | quote }}
+
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+
           volumeMounts:
             - name: mautic-media
               mountPath: /var/www/html/docroot/media
-
             - name: mautic-config
               mountPath: /var/www/html/config
-            
             - name: mautic-data
               mountPath: /var/www/html/var
-
-            - name: php-opcache
-              mountPath: /usr/local/etc/php/conf.d/opcache.ini
-              subPath: opcache.ini
-
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-
-          readinessProbe:
-            tcpSocket:
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            failureThreshold: 6
-
-          livenessProbe:
-            tcpSocket:
-              port: http
-            initialDelaySeconds: 180
-            periodSeconds: 30
-            failureThreshold: 5
 
       volumes:
         - name: mautic-media
           persistentVolumeClaim:
             claimName: {{ include "mautic.mediaPVC" . }}
-
         - name: mautic-config
           persistentVolumeClaim:
             claimName: {{ include "mautic.configPVC" . }}
-        
         - name: mautic-data
           persistentVolumeClaim:
             claimName: {{ include "mautic.dataPVC" . }}
-        
-        - name: php-opcache
-          configMap:
-            name: {{ include "mautic.fullname" . }}-php-opcache
+{{- end }}

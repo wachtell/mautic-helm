@@ -27,3 +27,8 @@ data:
   MAUTIC_TRUSTED_HOSTS: {{ .Values.mautic.trustedHosts | toJson | quote }}
 
   MAUTIC_BASE_URL: https://mautic.wachtell.net
+
+  # var/ is shared across pods (RWX), so give each image version its own
+  # Symfony cache dir; a new version never loads a container compiled by
+  # the old one. Read by AppKernel::getCacheDir() via the local parameter bag.
+  MAUTIC_CONFIG_PARAMETERS: {{ dict "cache_path" (include "mautic.cachePath" .) | toJson | quote }}

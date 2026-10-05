@@ -158,6 +158,15 @@ redis:
 cron:
   enabled: true
 
+  # Console commands are short-lived; don't reserve web-pod sized resources
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
   jobs:
 
     - name: segments-update
@@ -184,6 +193,23 @@ cron:
       schedule: "0 3 * * *"
       command: mautic:maintenance:cleanup
       
+worker:
+  # Messenger consumers. Enable only if Mautic queues messages
+  # (Configuration > Queue settings uses a non-sync transport).
+  enabled: false
+  replicas: 1
+  consumers:
+    email: 2
+    hit: 2
+    failed: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
 autoscaling:
   enabled: true
   minReplicas: 2

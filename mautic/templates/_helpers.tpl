@@ -121,3 +121,37 @@ Must come before any env var that references them with $(VAR).
 - name: MAUTIC_CACHE_ADAPTER_REDIS
   value: '{"adapter":"cache.adapter.redis","dsn":"redis://:$(MAUTIC_REDIS_PASSWORD)@{{ include "mautic.redisHost" . }}:6379"}'
 {{- end -}}
+
+
+{{/*
+Per-image-version Symfony cache dir on the shared var/ volume
+*/}}
+{{- define "mautic.cacheRoot" -}}
+/var/www/html/var/cache
+{{- end -}}
+
+{{- define "mautic.cachePath" -}}
+{{- printf "%s/%s" (include "mautic.cacheRoot" .) (.Values.image.tag | replace "/" "-") -}}
+{{- end -}}
+
+
+{{/*
+Run Mautic console commands as www-data (uid 33 in the official image),
+matching the web server, so files written to shared volumes stay writable
+*/}}
+{{- define "mautic.wwwDataSecurityContext" -}}
+runAsUser: 33
+runAsGroup: 33
+runAsNonRoot: true
+{{- end -}}
+
+
+{{/*
+Pod annotations that roll pods when config or credentials change.
+The credential Secrets belong to the subcharts, so hash the values that feed them.
+*/}}
+{{- define "mautic.checksums" -}}
+checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
+checksum/php-opcache: {{ include (print .Template.BasePath "/php-opcache-configmap.yaml") . | sha256sum }}
+checksum/credentials: {{ list .Values.mariadb.auth .Values.redis.auth | toJson | sha256sum }}
+{{- end -}}
