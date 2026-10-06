@@ -142,21 +142,21 @@ spec:
           ports:
             - name: mysql
               containerPort: 3306
-          # "ping" succeeds once the server accepts connections, even when the
-          # login itself is refused, so no credentials are needed here
+          # The image's healthcheck.sh logs in with the healthcheck user the
+          # entrypoint creates (credentials in <datadir>/.my-healthcheck.cnf)
           startupProbe:
             exec:
-              command: ["mariadb-admin", "ping", "-h", "127.0.0.1", "--silent"]
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
             periodSeconds: 10
             failureThreshold: 60
           readinessProbe:
             exec:
-              command: ["mariadb-admin", "ping", "-h", "127.0.0.1", "--silent"]
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
             periodSeconds: 10
             timeoutSeconds: 5
           livenessProbe:
             exec:
-              command: ["mariadb-admin", "ping", "-h", "127.0.0.1", "--silent"]
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 6
