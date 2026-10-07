@@ -1,0 +1,53 @@
+name: Helm lint
+
+# Checks the chart on every push and pull request: lint and render it with the
+# base values and with the production values. values-secret.yaml is not in the
+# repo, so placeholder passwords stand in for it.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      CHART: mautic
+      # Placeholders for the values that live in values-secret.yaml
+      SECRET_VALUES: mariadb.auth.password=ci-placeholder,mariadb.auth.rootPassword=ci-placeholder
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v5
+        with:
+          version: v3.19.3
+
+      - name: Lint (base values)
+        run: helm lint "$CHART" --strict --set "$SECRET_VALUES"
+
+      - name: Lint (production values)
+        run: helm lint "$CHART" --strict -f "$CHART/values-production.yaml" --set "$SECRET_VALUES"
+
+      - name: Render (base values)
+        run: helm template mautic "$CHART" -n mautic --set "$SECRET_VALUES" > /dev/null
+
+      - name: Render (production values, all optional features on)
+        run: >-
+          helm template mautic "$CHART" -n mautic
+          -f "$CHART/values-production.yaml"
+          --set "$SECRET_VALUES"
+          --set worker.enabled=true
+          > /dev/null
+
+      - name: Check shell scripts
+        run: |
+          for f in scripts/*.sh; do
+            bash -n "$f"
+            echo "ok: $f"
+          done
