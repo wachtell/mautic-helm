@@ -126,6 +126,10 @@ spec:
               mountPath: /usr/local/etc/php/conf.d/zz-session.ini
               subPath: session.ini
 
+            - name: apache-config
+              mountPath: /etc/apache2/conf-enabled/zz-request-timing.conf
+              subPath: zz-request-timing.conf
+
             {{- if .Values.grapesjsAssets.enabled }}
             # Filled by the grapesjs-assets job (image lacks the compiled builder)
             - name: mautic-data
@@ -171,3 +175,7 @@ spec:
         - name: php-session
           configMap:
             name: {{ include "mautic.fullname" . }}-php-session
+
+        - name: apache-config
+          configMap:
+            name: {{ include "mautic.fullname" . }}-apache

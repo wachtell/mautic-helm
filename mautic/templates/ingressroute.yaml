@@ -58,6 +58,17 @@ spec:
         - name: {{ $svc }}
           port: {{ .Values.service.port }}
 
+    # Versioned static assets (Mautic JS/CSS, builder bundles): browser-cacheable
+    - match: Host(`{{ $host }}`) && PathRegexp(`^/(media/(js|css)/|assets/build/|plugins/[^/]+/Assets/)`)
+      kind: Rule
+      priority: 160
+      middlewares:
+        - name: {{ $mw }}static-cache
+        - name: {{ $mw }}public-headers
+      services:
+        - name: {{ $svc }}
+          port: {{ .Values.service.port }}
+
     # Public form submissions: rate limited
     - match: Host(`{{ $host }}`) && PathRegexp(`^/(index\.php/)?form/submit`)
       kind: Rule

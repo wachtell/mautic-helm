@@ -48,6 +48,8 @@ ingressRoute:
     burst: 20
   # Header carrying the real client IP (set by Cloudflare); "" to use the peer IP
   clientIpHeader: CF-Connecting-IP
+  # Browser cache lifetime for versioned JS/CSS (seconds)
+  staticCacheSeconds: 86400
 
 authentik:
   # Forward-auth for ingressRoute.protectedPaths via the authentik outpost

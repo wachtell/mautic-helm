@@ -146,6 +146,7 @@ The credential Secrets belong to the subcharts, so hash the values that feed the
 checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
 checksum/php-opcache: {{ include (print .Template.BasePath "/php-opcache-configmap.yaml") . | sha256sum }}
 checksum/php-session: {{ include (print .Template.BasePath "/php-session-configmap.yaml") . | sha256sum }}
+checksum/apache: {{ include (print .Template.BasePath "/apache-configmap.yaml") . | sha256sum }}
 checksum/credentials: {{ .Values.mariadb.auth | toJson | sha256sum }}
 {{- end -}}
 

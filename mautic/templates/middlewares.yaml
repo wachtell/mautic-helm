@@ -48,6 +48,20 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
+  name: {{ $mw }}static-cache
+  labels:
+    {{- include "mautic.labels" . | nindent 4 }}
+spec:
+  # Mautic serves its JS/CSS without Cache-Control, so browsers revalidate
+  # them on every page load. They are versioned (?v<hash> or hashed names).
+  headers:
+    customResponseHeaders:
+      Cache-Control: "public, max-age={{ .Values.ingressRoute.staticCacheSeconds }}"
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
   name: {{ $mw }}form-ratelimit
   labels:
     {{- include "mautic.labels" . | nindent 4 }}
