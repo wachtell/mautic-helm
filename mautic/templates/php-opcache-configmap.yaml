@@ -10,8 +10,8 @@ data:
     opcache.enable_cli=0
 
     ; Memory
-    opcache.memory_consumption=256
-    opcache.interned_strings_buffer=16
+    opcache.memory_consumption={{ .Values.opcache.memoryMB }}
+    opcache.interned_strings_buffer={{ .Values.opcache.internedStringsMB }}
 
     ; Number of cached PHP scripts
     opcache.max_accelerated_files=30000

@@ -37,7 +37,8 @@ data:
     ignore_user_abort(true);
 
     $deadline = microtime(true) + {{ .Values.warmup.compileBudgetSeconds }};
-    $minFree  = 32 * 1024 * 1024;
+    // Leave room for files only compiled at runtime (e.g. Twig after a config change)
+    $minFree  = {{ .Values.warmup.keepFreeMB }} * 1024 * 1024;
     $root     = '/var/www/html';
 
     // Compiled Symfony container and Twig templates of this version first

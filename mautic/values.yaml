@@ -272,11 +272,18 @@ migrations:
   enabled: true
   timeoutSeconds: 900
 
+opcache:
+  # Shared OPcache memory per web pod; Mautic + vendor need ~250 MB warm
+  memoryMB: 512
+  internedStringsMB: 32
+
 warmup:
   # Fill PHP's OPcache in a postStart hook so new pods (deploys, HPA
   # scale-ups) don't serve their first clicks cold
   enabled: true
   compileBudgetSeconds: 90
+  # OPcache memory the warm-up leaves free
+  keepFreeMB: 128
   timeoutSeconds: 240
 
 autoscaling:
