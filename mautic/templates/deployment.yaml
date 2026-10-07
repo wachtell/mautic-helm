@@ -84,6 +84,30 @@ spec:
             {{- include "mautic.webCommand" . | nindent 12 }}
           {{- end }}
 
+          {{- if .Values.warmup.enabled }}
+          # Warm OPcache before the pod gets traffic: Kubernetes only starts the
+          # probes (and marks the pod Ready) once postStart has finished. Always
+          # exits 0 - a failing postStart would kill the container.
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    exec >/proc/1/fd/1 2>&1
+                    timeout {{ .Values.warmup.timeoutSeconds }} sh -c '
+                      until curl -fs -o /dev/null --max-time 3 http://127.0.0.1/app/assets/images/favicon.ico; do sleep 2; done
+                      echo "[warmup] apache is up, compiling PHP into OPcache..."
+                      echo "[warmup] $(curl -s --max-time {{ add .Values.warmup.compileBudgetSeconds 60 }} http://127.0.0.1/__opcache-warmup)"
+                      for u in /s/login /s/dashboard /s/contacts /s/emails /mtc.js /saml/metadata.xml; do
+                        curl -s -o /dev/null --max-time 30 -H "Host: {{ .Values.ingressRoute.host }}" -H "X-Forwarded-Proto: https" "http://127.0.0.1$u"
+                      done
+                      echo "[warmup] done"
+                    ' || echo "[warmup] skipped or timed out"
+                    exit 0
+          {{- end }}
+
           ports:
             - name: http
               containerPort: 80
@@ -129,6 +153,14 @@ spec:
             - name: apache-config
               mountPath: /etc/apache2/conf-enabled/zz-request-timing.conf
               subPath: zz-request-timing.conf
+            {{- if .Values.warmup.enabled }}
+            - name: apache-config
+              mountPath: /etc/apache2/conf-enabled/zz-opcache-warmup.conf
+              subPath: zz-opcache-warmup.conf
+            - name: apache-config
+              mountPath: /opt/mautic-warmup/warmup.php
+              subPath: warmup.php
+            {{- end }}
 
             {{- if .Values.grapesjsAssets.enabled }}
             # Filled by the grapesjs-assets job (image lacks the compiled builder)

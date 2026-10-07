@@ -272,6 +272,13 @@ migrations:
   enabled: true
   timeoutSeconds: 900
 
+warmup:
+  # Fill PHP's OPcache in a postStart hook so new pods (deploys, HPA
+  # scale-ups) don't serve their first clicks cold
+  enabled: true
+  compileBudgetSeconds: 90
+  timeoutSeconds: 240
+
 autoscaling:
 
   enabled: true

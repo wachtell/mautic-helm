@@ -12,3 +12,91 @@ data:
   # duration (%D, microseconds) so slow requests show up in the pod logs.
   zz-request-timing.conf: |
     LogFormat "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" %Dus" combined
+
+  {{- if .Values.warmup.enabled }}
+  # OPcache warm-up endpoint for the postStart hook. Local requests only:
+  # anything arriving through Traefik gets 403.
+  zz-opcache-warmup.conf: |
+    Alias /__opcache-warmup /opt/mautic-warmup/warmup.php
+    <Directory /opt/mautic-warmup>
+        Require local
+    </Directory>
+
+  # OPcache belongs to the Apache/PHP process, so it has to be filled from a
+  # web request (php-cli has its own cache). Compiles Mautic's PHP files,
+  # most-used first, within a time budget and while enough OPcache memory is
+  # free. Compiling doesn't execute anything.
+  warmup.php: |
+    <?php
+    header('Content-Type: text/plain');
+    if (!function_exists('opcache_compile_file') || false === @opcache_get_status(false)) {
+        echo "opcache not available\n";
+        return;
+    }
+    set_time_limit(0);
+    ignore_user_abort(true);
+
+    $deadline = microtime(true) + {{ .Values.warmup.compileBudgetSeconds }};
+    $minFree  = 32 * 1024 * 1024;
+    $root     = '/var/www/html';
+
+    // Compiled Symfony container and Twig templates of this version first
+    $params = json_decode((string) getenv('MAUTIC_CONFIG_PARAMETERS'), true) ?: [];
+    $dirs   = [];
+    if (!empty($params['cache_path'])) {
+        $dirs[] = rtrim($params['cache_path'], '/').'/prod';
+    }
+    array_push($dirs,
+        "$root/docroot/app/bundles",
+        "$root/docroot/app/AppKernel.php",
+        "$root/vendor/symfony",
+        "$root/vendor/doctrine",
+        "$root/vendor/twig",
+        "$root/docroot/plugins",
+        "$root/vendor"
+    );
+
+    $seen = [];
+    $n = $skipped = 0;
+    $stop = '';
+    foreach ($dirs as $dir) {
+        if (is_file($dir)) {
+            $files = [new SplFileInfo($dir)];
+        } elseif (is_dir($dir)) {
+            $files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
+            );
+        } else {
+            continue;
+        }
+        foreach ($files as $f) {
+            $path = $f->getPathname();
+            if (isset($seen[$path]) || 'php' !== $f->getExtension()
+                || preg_match('#/(tests?|Tests?|fixtures?|Fixtures?)/#', $path)) {
+                continue;
+            }
+            $seen[$path] = true;
+            if (microtime(true) > $deadline) {
+                $stop = 'time budget';
+                break 2;
+            }
+            $mem = opcache_get_status(false)['memory_usage'] ?? null;
+            if ($mem && $mem['free_memory'] < $minFree) {
+                $stop = 'opcache memory';
+                break 2;
+            }
+            try {
+                if (!opcache_is_script_cached($path) && @opcache_compile_file($path)) {
+                    ++$n;
+                }
+            } catch (\Throwable $e) {
+                ++$skipped;
+            }
+        }
+    }
+    $s = opcache_get_status(false);
+    printf("compiled %d files (%d skipped)%s; cached scripts %d, opcache used %d MB\n",
+        $n, $skipped, $stop ? ", stopped: $stop" : '',
+        $s['opcache_statistics']['num_cached_scripts'] ?? -1,
+        (int) (($s['memory_usage']['used_memory'] ?? 0) / 1048576));
+  {{- end }}
