@@ -39,9 +39,11 @@ spec:
     spec:
 
       initContainers:
-        # Create dirs on the shared var/ volume as www-data before they're used:
+        # Create dirs on the shared volumes as www-data before they're used:
         # PHP doesn't create session.save_path, and kubelet would create a
-        # missing subPath dir as root
+        # missing subPath dir as root. The volumes are mounted under /shared
+        # here because the image declares VOLUMEs at media/images, media/files
+        # and var/logs, which would otherwise shadow them in this container too.
         - name: prepare-shared-dirs
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -50,9 +52,12 @@ spec:
           command:
             - mkdir
             - -p
-            - {{ include "mautic.sessionPath" . | quote }}
+            - /shared/var/sessions
+            - /shared/var/logs
+            - /shared/media/images
+            - /shared/media/files
             {{- if .Values.grapesjsAssets.enabled }}
-            - {{ printf "/var/www/html/var/%s" (include "mautic.grapesjsSubPath" .) | quote }}
+            - {{ printf "/shared/var/%s" (include "mautic.grapesjsSubPath" .) | quote }}
             {{- end }}
           resources:
             requests:
@@ -62,7 +67,9 @@ spec:
               memory: 64Mi
           volumeMounts:
             - name: mautic-data
-              mountPath: /var/www/html/var
+              mountPath: /shared/var
+            - name: mautic-media
+              mountPath: /shared/media
 
       containers:
 
@@ -93,12 +100,23 @@ spec:
           volumeMounts:
             - name: mautic-media
               mountPath: /var/www/html/docroot/media
+            # The image declares VOLUMEs for these; mount them explicitly or the
+            # container runtime shadows them with per-pod local dirs
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media/images
+              subPath: images
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media/files
+              subPath: files
 
             - name: mautic-config
               mountPath: /var/www/html/config
             
             - name: mautic-data
               mountPath: /var/www/html/var
+            - name: mautic-data
+              mountPath: /var/www/html/var/logs
+              subPath: logs
 
             - name: php-opcache
               mountPath: /usr/local/etc/php/conf.d/opcache.ini

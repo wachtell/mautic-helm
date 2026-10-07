@@ -38,6 +38,14 @@ spec:
           volumeMounts:
             - name: mautic-media
               mountPath: /var/www/html/docroot/media
+            # The image declares VOLUMEs for these; mount them explicitly or the
+            # container runtime shadows them with per-pod local dirs
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media/images
+              subPath: images
+            - name: mautic-media
+              mountPath: /var/www/html/docroot/media/files
+              subPath: files
       volumes:
         - name: mautic-media
           persistentVolumeClaim:

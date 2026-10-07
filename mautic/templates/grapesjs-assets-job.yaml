@@ -76,6 +76,9 @@ spec:
           volumeMounts:
             - name: mautic-data
               mountPath: /var/www/html/var
+            - name: mautic-data
+              mountPath: /var/www/html/var/logs
+              subPath: logs
             - name: tmp
               mountPath: /tmp
       volumes:
