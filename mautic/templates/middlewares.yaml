@@ -87,6 +87,7 @@ metadata:
 spec:
   forwardAuth:
     address: http://{{ .Values.authentik.outpost.host }}:{{ .Values.authentik.outpost.port }}/outpost.goauthentik.io/auth/traefik
+    maxResponseBodySize: 1048576  # authentik replies are tiny; Traefik v3.7 warns when unset
     trustForwardHeader: true
     authResponseHeaders:
       - X-authentik-username

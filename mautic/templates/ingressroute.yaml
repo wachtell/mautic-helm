@@ -19,6 +19,9 @@ metadata:
   {{- end }}
 
 spec:
+  {{- with .Values.ingressRoute.ingressClassName }}
+  ingressClassName: {{ . }}
+  {{- end }}
   entryPoints:
     {{- range .Values.ingressRoute.entryPoints }}
     - {{ . }}

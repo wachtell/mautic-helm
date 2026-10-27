@@ -28,6 +28,7 @@ ingressRoute:
     - websecure
   annotations:
     kubernetes.io/ingress.class: traefik-external
+  ingressClassName: traefik-external
   host: mautic.wachtell.net
   tls:
     enabled: true
