@@ -123,7 +123,7 @@ Per-image-version Symfony cache dir on the shared var/ volume
 {{- end -}}
 
 {{- define "mautic.cachePath" -}}
-{{- printf "%s/%s" (include "mautic.cacheRoot" .) (.Values.image.tag | replace "/" "-") -}}
+{{- printf "%s/%s" (include "mautic.cacheRoot" .) (.Values.image.tag | splitList "@" | first | replace "/" "-") -}}
 {{- end -}}
 
 

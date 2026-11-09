@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: mautic/mautic
-  tag: "7.2.1-apache"
+  tag: "7.2.2-apache@sha256:83461b9ec7c109413281490180e1f96c379aa935bd92f80c68294f98487a9015"   # = what app-auto-update runs (kubectl set image) - keep in sync before helm upgrade
   pullPolicy: IfNotPresent
 
 mautic:
@@ -265,6 +265,15 @@ grapesjsAssets:
   enabled: true
   version: "7.2.1"
   sha256: 5c86cf1fe8b4f9818232ce8bb755760f502d47846706e9164d144865d031ecbd
+
+themes:
+  # Email themes shipped with the chart (folder themes/<name>/), mounted read-only
+  # into the web pods at docroot/themes/<name>. That folder is not on a volume, so a
+  # theme uploaded in the UI lands in one pod only and is gone after a restart.
+  # After changing a theme's files: helm upgrade, then clear the shared Symfony
+  # cache (Twig caches the compiled template there):
+  #   kubectl -n mautic exec deploy/mautic-mautic -- su -s /bin/sh www-data -c 'php bin/console cache:clear'
+  - wachtell
 
 migrations:
   # Run Doctrine migrations once per upgrade in a pre-upgrade hook Job instead

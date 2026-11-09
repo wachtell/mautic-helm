@@ -1,0 +1,14 @@
+{
+  "name": "Wachtell",
+  "author": "Wachtell.net",
+  "authorUrl": "https://wachtell.net",
+  "builder": [
+    "grapesjsbuilder"
+  ],
+  "features": [
+    "email"
+  ],
+  "tags": [
+    "wachtell"
+  ]
+}

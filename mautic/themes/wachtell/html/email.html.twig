@@ -1,0 +1,85 @@
+<mjml>
+  <!-- Wachtell email theme v1.0 (2026-11-09): the look of the "Jellyfin Welcome Email"
+       (~/mautic-email-images/jellyfin-welcome.mjml). Images are served from https://mautic.wachtell.net/media/images
+       (Mautic media PVC) - swap them in the builder. Links: tracked on button/images, mautic:disable-tracking on
+       text links to the same site with a different URL (Mautic tracks per URL, not per link). -->
+  <mj-head>
+    <mj-title>Wachtell.net</mj-title>
+    <mj-attributes>
+      <mj-all font-family="Helvetica, Arial, sans-serif"></mj-all>
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f4f4f4" width="600px">
+    <!-- Header: web view link + logo -->
+    <mj-section background-color="#ffffff" padding="20px 0px 0px">
+      <mj-column>
+        <mj-text align="center" font-size="11px" color="#888888" padding="0px 20px 12px">{webview_text}</mj-text>
+        <mj-image src="https://mautic.wachtell.net/media/images/wachtellonline-logo.png" href="https://wachtell.net" width="70px" alt="Wachtell.net" padding="0px" />
+      </mj-column>
+    </mj-section>
+    <!-- Title -->
+    <mj-section background-color="#ffffff" padding="16px 0px 20px">
+      <mj-column>
+        <mj-text align="center" font-size="24px" font-weight="700" line-height="1.3" color="#111111" padding="0px 24px">
+          Your headline goes here
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <!-- Pictures: full width, stacked - remove the second one if not needed -->
+    <mj-section background-color="#ffffff" padding="0px">
+      <mj-column>
+        <mj-image src="https://mautic.wachtell.net/media/images/jellyfin-movies.jpg" href="https://wachtell.net" alt="Picture 1" width="600px" padding="0px" />
+        <mj-image src="https://mautic.wachtell.net/media/images/jellyfin-tvshows.jpg" href="https://wachtell.net" alt="Picture 2" width="600px" padding="6px 0px 0px" />
+      </mj-column>
+    </mj-section>
+    <!-- Call to action -->
+    <mj-section background-color="#ffffff" padding="28px 0px 0px">
+      <mj-column>
+        <mj-text align="center" font-size="16px" line-height="1.5" color="#222222" padding="0px 24px">
+          One sentence that tells the reader what to do, with a <a href="https://wachtell.net" mautic:disable-tracking style="color:#00a4dc; text-decoration:none;">link</a>.
+        </mj-text>
+        <mj-button href="https://wachtell.net/" background-color="#00a4dc" color="#ffffff" font-size="16px" font-weight="700" border-radius="6px" inner-padding="14px 32px" padding="18px 24px 0px">
+          Button text
+        </mj-button>
+      </mj-column>
+    </mj-section>
+    <!-- Info: heading + bullet list -->
+    <mj-section background-color="#ffffff" padding="40px 0px 0px">
+      <mj-column>
+        <mj-text font-size="20px" font-weight="700" line-height="1.3" color="#111111" padding="0px 24px 12px">
+          A second heading
+        </mj-text>
+        <mj-text font-size="16px" line-height="1.5" color="#222222" padding="0px 24px">
+          <ul style="margin:0; padding-left:20px;">
+            <li style="margin:0 0 8px;"><strong>First point:</strong> short explanation.</li>
+            <li style="margin:0 0 8px;"><strong>Second point:</strong> short explanation.</li>
+            <li style="margin:0 0 8px;"><strong>Forgot your password?</strong> Reset it at <a href="https://authentik.wachtell.net/if/flow/default-recovery-flow/?next=%2F" mautic:disable-tracking style="color:#00a4dc; text-decoration:none;">Wachtell SSO</a>.</li>
+            <li style="margin:0;">Questions? Email <a href="mailto:kristian@wachtell.net" mautic:disable-tracking style="color:#00a4dc; text-decoration:none;">kristian@wachtell.net</a>.</li>
+          </ul>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <!-- App badges (Jellyfin app links) - change the links or delete this section -->
+    <mj-section background-color="#ffffff" padding="24px 0px 32px">
+      <mj-column>
+        <mj-text align="center" padding="0px 12px">
+          <a href="https://apps.apple.com/app/id1480192618"><img src="https://mautic.wachtell.net/media/images/badge-app-store.png" width="150" height="44" alt="Download on the App Store" style="display:inline-block; border:0; margin:0 4px;"></a><a href="https://play.google.com/store/apps/details?id=org.jellyfin.mobile"><img src="https://mautic.wachtell.net/media/images/badge-google-play.png" width="150" height="44" alt="Get it on Google Play" style="display:inline-block; border:0; margin:0 4px;"></a>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <!-- Footer -->
+    <mj-section background-color="#000000" padding="32px 0px">
+      <mj-column>
+        <mj-text align="center" font-size="12px" line-height="1.6" color="#ffffff" padding="0px 24px">
+          <strong>Wachtell.net</strong><br>
+          28 Lange-Müllers Alle, DK-2960 Rungsted Kyst, Denmark<br>
+          <a href="https://wachtell.net" mautic:disable-tracking style="color:#ffffff;">wachtell.net</a> &nbsp;·&nbsp; <a href="https://wachtellonline.com" mautic:disable-tracking style="color:#ffffff;">wachtellonline.com</a>
+        </mj-text>
+        <mj-text align="center" font-size="11px" line-height="1.5" color="#b3b3b3" padding="20px 24px 0px">
+          You’re getting this email because you gave us your email address.<br>
+          {unsubscribe_text}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

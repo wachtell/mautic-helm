@@ -1,0 +1,31 @@
+{{- /*
+Extra themes shipped with the chart: every file under themes/<name>/ becomes a key of
+ConfigMap <fullname>-theme-<name> ("/" -> "__", PNGs as binaryData); the web pods mount it at
+docroot/themes/<name> (deployment.yaml).
+*/}}
+{{- range $name := .Values.themes }}
+{{- $prefix := printf "themes/%s/" $name }}
+{{- $files := $.Files.Glob (printf "%s**" $prefix) }}
+{{- if not $files }}
+{{- fail (printf "themes: %s listed in values, but the chart has no files under %s" $name $prefix) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mautic.fullname" $ }}-theme-{{ $name }}
+  labels:
+    {{- include "mautic.labels" $ | nindent 4 }}
+data:
+  {{- range $path, $_ := $files }}
+  {{- if not (hasSuffix ".png" $path) }}
+  {{ trimPrefix $prefix $path | replace "/" "__" }}: {{ $.Files.Get $path | quote }}
+  {{- end }}
+  {{- end }}
+binaryData:
+  {{- range $path, $_ := $files }}
+  {{- if hasSuffix ".png" $path }}
+  {{ trimPrefix $prefix $path | replace "/" "__" }}: {{ $.Files.Get $path | b64enc }}
+  {{- end }}
+  {{- end }}
+{{- end }}

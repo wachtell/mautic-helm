@@ -170,6 +170,13 @@ spec:
               readOnly: true
             {{- end }}
 
+            # Chart themes (themes-configmap.yaml) - docroot/themes is not on a volume
+            {{- range $name := .Values.themes }}
+            - name: theme-{{ $name }}
+              mountPath: /var/www/html/docroot/themes/{{ $name }}
+              readOnly: true
+            {{- end }}
+
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 
@@ -211,3 +218,15 @@ spec:
         - name: apache-config
           configMap:
             name: {{ include "mautic.fullname" . }}-apache
+
+        {{- range $name := .Values.themes }}
+        {{- $prefix := printf "themes/%s/" $name }}
+        - name: theme-{{ $name }}
+          configMap:
+            name: {{ include "mautic.fullname" $ }}-theme-{{ $name }}
+            items:
+              {{- range $path, $_ := $.Files.Glob (printf "%s**" $prefix) }}
+              - key: {{ trimPrefix $prefix $path | replace "/" "__" }}
+                path: {{ trimPrefix $prefix $path }}
+              {{- end }}
+        {{- end }}
