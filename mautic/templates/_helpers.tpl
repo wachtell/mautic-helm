@@ -179,3 +179,27 @@ the script so the block isn't found, migrations simply keep running as before.
   fi
   exec /entrypoint.sh
 {{- end -}}
+
+{{/*
+Refuse to downgrade: app-auto-update updates Mautic with kubectl set image and commits the new
+pin to GitHub. A helm upgrade from a checkout without that commit would roll Mautic back (and
+the database may already be migrated). lookup is empty in helm template / client dry runs.
+Override: --set image.allowDowngrade=true
+*/}}
+{{- define "mautic.downgradeGuard" -}}
+{{- if not .Values.image.allowDowngrade -}}
+{{- $live := lookup "apps/v1" "Deployment" .Release.Namespace (include "mautic.fullname" .) -}}
+{{- if $live -}}
+{{- $liveImage := (index $live.spec.template.spec.containers 0).image -}}
+{{- include "mautic.compareVersions" (dict "live" $liveImage "want" .Values.image.tag) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "mautic.compareVersions" -}}
+{{- $liveV := regexFind "[0-9]+\\.[0-9]+\\.[0-9]+" (.live | splitList "@" | first | splitList ":" | last) -}}
+{{- $wantV := regexFind "[0-9]+\\.[0-9]+\\.[0-9]+" (.want | splitList "@" | first) -}}
+{{- if and $liveV $wantV (semverCompare (printf "<%s" $liveV) $wantV) -}}
+{{- fail (printf "image.tag %s is older than what runs (%s) - app-auto-update has updated Mautic and committed the new pin: git pull in ~/mautic-helm, then upgrade again (to really downgrade: --set image.allowDowngrade=true)" $wantV $liveV) -}}
+{{- end -}}
+{{- end -}}

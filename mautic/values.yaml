@@ -2,8 +2,10 @@ replicaCount: 2
 
 image:
   repository: mautic/mautic
-  tag: "7.2.2-apache@sha256:83461b9ec7c109413281490180e1f96c379aa935bd92f80c68294f98487a9015"   # = what app-auto-update runs (kubectl set image) - keep in sync before helm upgrade
+  tag: "7.2.2-apache@sha256:83461b9ec7c109413281490180e1f96c379aa935bd92f80c68294f98487a9015"   # app-auto-update commits new pins here (repo_sync) - git pull before helm upgrade
   pullPolicy: IfNotPresent
+  # helm upgrade refuses a tag older than what runs (templates/_helpers.tpl downgradeGuard); true = allow
+  allowDowngrade: false
 
 mautic:
   trustedProxies:
