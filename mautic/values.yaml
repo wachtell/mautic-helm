@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: mautic/mautic
-  tag: "7.2.2-apache@sha256:cb5a72a63c855917c2c6eca65cd368b02d8d491bc135d3834e85ba5d575d789c"   # app-auto-update commits new pins here (repo_sync) - git pull before helm upgrade
+  tag: "7.2.3-apache@sha256:8b1987db3f77c980f45b0b0ecf384ca0ef2a331ef26d979350f820f979aa639f"   # app-auto-update commits new pins here (repo_sync) - git pull before helm upgrade
   pullPolicy: IfNotPresent
   # helm upgrade refuses a tag older than what runs (templates/_helpers.tpl downgradeGuard); true = allow
   allowDowngrade: false
